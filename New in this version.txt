@@ -1,0 +1,207 @@
+This is a bug fixed version of The Hosting Tool 1.3 and has as many bugs fixed as I could find.  I also made it more secure and made other modifications too.
+
+Bugs fixed by Na'ven Enigma of http://thelifemaster.com
+
+Fixes:
+1.) Removed stylechanger.php as it was removed in favour of lof (Look and Feel).  Nothing referenced it.
+2.) Some of the templates weren't sending the CSRF token and I restructured the $post queries to make them work.  (NavEdit's ordering was one of them as well.)
+3.) Made the invoices page stop showing dates from the 70's and I made it show the correct date.  =)
+4.) Made it so the DB entry for the invoice amount is a varchar value instead of an int.  Now you can have invoices with cents.  Makes sense, doesn't it?  ;)
+5.) Corrected some typos (Ex. There are no SERVERS to delete - on the empty delete packages page.)  I also found this typo to be funny.  "You will recieve another
+    email when the admin has overlooked your account."  lol  It should be "looked over", not "overlooked."
+6.) Added more informative information on how the functions work.  (Ex. When you delete a package, it now says that you are only deleting thepackage in THT.)
+7.) Client area announcements can now be blank.
+8.) When you would edit some text, the strip() in class_db.php would leave the \r\n in tact from (presumably) TinyMCE.  I stripped that out so your text doesn't show
+     rn in the box you're editing and add multiple lines as well when you used a new line.
+9.) Some pages would call $main->done() which would redirect the person to the page they were on so they couldn't refresh the page and send post data through.
+     This in fact blocked the previous command of $main->errors() from ever showing and stopped the person executing the function, from ever knowing if
+     the entry was added or rejected.  I took out the $main->done() from these pages to resolve this issue.  (Ex. Deleting a KB category or article.)
+10.) After a staff member is deleted, they no longer appear in the list of accounts when the deletion is confirmed.
+11.) Subdomain section is now appropriatly named.  We are adding subdomain domains, not subdomains.  The domains will later have subdomains, but right now they
+     being added as domains.
+12.) Removed presumed test data, echo "hey!";, from whmimport.php.
+13.) Uploader now lets you know that it uploaded the theme.  (Again, $main->done() was redirecting it.)
+14.) The order form now allows apostrophes in first and last names.  Stripslashes() was needed to make it accept them.  The preg_match() was trying to accept them, though.
+15.) Well that was torture.  lol  After 6 hours of hard work and perserverance, I managed to write enough JS to validate the order form to make sure its filled out and to
+     make sure there aren't any errors either.
+16.) The order form was ignoring the TLD only setting and only checking if domains are available to add subdomains to.  I made it check this setting as well.
+17.) I cleaned up class_server.php's signup().  It had 20 different ways of checking variables all separated and with unnecessary parenthesis.  I made notes in that file as well.
+18.) You can now have people sign up for plans that have spaces in them.  I used str_replace to change spaces to %20 and it worked after that.  I did that for both WHM
+     and DA.
+19.) The importer will now set the user's status to 1 so they can log into THT as well.
+20.) The ticket system works now.  It no longer wraps the page in TinyMCE code.  I found out that the textareas need the id "msgcontent" for TinyMCE to find it.  I thought it would
+     find the textareas automatically since it has its mode set to textareas.  I guess not.  I also fixed the email a user page to no longer be wrapped as well.
+21.) The delete account function in the client area delete the user from the DB and their packages associated with them.  This now makes it so they can re-register instead
+     of keeping pointless data on the system and hindering their ability to re-register.
+22.) I tweaked the server connection tester to use $_SERVER['SERVER_ADDR'] if the connection fails.  Now you can see if you can connect to your backend server.
+23.) I fixed the PayPal payments capability.  It wasn't posting the variables to paypal, it was constructing a URL to submit to.  This caused the form to not send the
+     notify_url parameter and other things.  I made it construct a hidden JS form with the info and post it to PayPal when they click "pay now".  Also, the IPN wasn't verifying,
+     so I reconstructed it.  lol  The way it was connecting was incorrect.  It was talking on port 80 instead of 443 and without the ssl:// prefix either.  The headers were
+     not formatted correctly and headers are case sensitive.  So, Content-Type: != Content-type:.  (!= Is "not equals" for any non-techs reading this.)  ALL HTML headers
+     need to have the first letters capitolized.  I learned that while I was troubleshooting since I was getting a 403 message saying that the browser wasn't sending the : and
+     really it wasn't the browser, but the scrip.  The second word didn't have the first letter capitolized, so it thought the - should have been a colon.  Not very informative
+     on the error message's part, but oh well.  So, now the paypal payments work the whole way around.
+24.) I made it so that when a user logs out of the client area and then logs in again right away, then CSRF wouldn't stop them.  The logot can't redirect to ?page=home.  It
+     must redirect to ./ instead.
+25.) I stopped clients from registering subdomains as domains.  (test.com was originally valid along with test.co.uk and test.test.co.uk.  Now all of those are valid except
+     test.test.co.uk.
+26.) Subdomains are now created properly.  csub2 (The dropdown box with domains) was never looked at in class_server.php
+27.) If an admin's approval is needed on a paid account, then they won't be redirected for payment, but the invoice will be created.  This stops people from needing to pay
+     for an account that may not be approved.  This also shows them the message stating that they need admin approval instead of redirecting them before they can read the message.
+     This also prevents the login screen from showing when the user can't possibly log in to pay the invoice until they get approved.
+28.) Subdomains can not be created using the domains option simply because the admin disabled TLD only.  It now checks if subdomains are available or not.  If they are not,
+     it says it only accepts TLDs.  If they are, it tells them to go back and select the subdomain option.
+29.) The invoices not associated with a client will say "Client Removed" instead of , () and if for some reason the first or last name is not there, it will say "None."  If a backup
+     of the client's information is in the DB still along with their packages backup, it will show information from there as well as showing the "Client Removed".
+30.) I got sick of playing guessing games of how to get the CSRF secret and found out that it was doing ob_start and taking that function away before the page started.
+     This means that if you wanted to tell it that a page is safe even if it didn't consider it so by rewriting part of the page, then you couldn't.  So, I copied part
+     of the csrf_get_secret() to $main->csrf_get_secret(); and now you can call that whenever you need it.  Such an aggravating CSRF checker.  Half the pages of your site get
+     blocked because it fails to check it properly.  What a load of rubbish.  lol
+31.) I made the email templates page not wrapped in TinyMCE code and I made the template description show at the top.  It also says Description: in bold letters and the variables
+     lable is bold on the templates with variables.  Everything is now formatted correctly.
+32.) If you have the %INFO% variable in a header or footer template in your theme, it will appear as %INFO% in the template editor instead of being replaced by the output buffer.
+33.) I made the edit forums page say "No forums to edit" instead of "No forums to delete."  I also made it check the MySQL connection when you edit a forum as well.  Also, when
+     you delete a forum, it will repull the forums list before it says its deleted.  This makes it not show in the list after it was deleted before reloading the page.  Also, all
+     errors or notifications will show with <br> at the end so the rest of the page doesn't get jumbled up with it.  I checked ordering a plan marked as P2P and it works fine.
+     I used PHPBB3 to test it.
+34.) On the paid cron job, the cron would keep suspending the user if it was time for them to be suspended without checking if they were suspended. I had it check if the package was
+     suspended or not.
+35.) SUB and INFO are now defined for the support area.  It will either show "Welcome back, Username or Welcome to Sitename depending on if you're logged in as an admin or client, or not
+     logged in.  Sub shows Knowledgebase as that's what was set in the header value in that file.
+36.) You can no longer submit empty nav links in the nav editor and I made the interface stop jumbling up the text.  (Ex. the "Changes were made..." stuff at the bottom is now on one line
+     instead of scrunched into a corner and the buttons show properly as well.)
+37.) I'm guessing this was forgotten, so I fixed it, but places like the logs were missing the  class="text" attribute on the table, so it wasn't getting styled and it looked crappy, so I
+     added that in to fix it.
+     
+
+Things I added to enhance THT:
+1.) You can now click the category's name in the KB to show only articles in that category.  You can also click the article's name to edit that aricle.
+2.) I added copyright info to the footer of the included themes.  (Your copyright and then my "reworked by" links.)
+3.) Dynamic admin directory - You can now rename your admin directory to enhance the security and the script will know what directory it is.
+4.) Admin home page tries to remove installer files and if it can't, then it informs you of what to delete.
+5.) I credited myself and the letters T and H in the credits page because without the letters T and H, THT wouldn't be possible.  =)
+6.) You can now use paypal in sandbox mode to see if your system works how you'd like it to.
+7.) I added Akismet to the system.  You can now have the person's first and last name and their email address checked through Akismet on the order page if
+    you enable it and give it your license key in the General Settings->Signup Form page.
+8.) Client area announcements now show on their home screen when they log in as well as the announcements section.
+9.) I set the default timezone to GMT and added the ability for users and staff members to set their time zone as well.  Users can change it in their details
+    and staff members can change it in the staff member edit page.  You can also set it when adding a staff member as well.  The order page also allows it to be set as well.
+10.) I made it so that the client's IP is updated in the DB when they log in.  If you're trying to block multiple signups, but either have no ip logged (imported from WHM/DA)
+     or you have the IP they had at signup (Most people have a dynamic IP) then its terribly ineffective if the IP isn't updated every time they log in.
+11.) I made it so you can change the type of package (free, paid, p2h) in the edit packages area.
+12.) You can now have the cron file send an email to every staff member when it outputs something.  Set that in the Security Settings.
+13.) I turned on PayPal IPN logging and made it log to the DB.  I added a way to change it to logging to a file or to the DB.  The original way was to log it to a file
+     and that was shut off.  As this is quite useful in seeing why someone's payment wasn't processed, I chose to keep it in the logs area and not have a setting to disable it
+     manually.  If you REALLY need it disabled, you can set $this->ipn_log = true; to $this->ipn_log = false; in the /includes/paypal/paypal.class.php file.  Its at the top
+     of that file.  Keep in mind, though, you might have your transactions failing because of something weird happening and wind up having the cron.php file automatically suspending or
+     terminating accounts for people who have paid you already, so if the logging is shut off, you'll never know.  The log is able to be viewed in the logs section of the admin area.
+     If you do switch it to logging to a file, the file will have HTML content in it since its meant to be logged to the DB for the logs area.
+14.) After I made the PayPal IPN log to the logs, I noticed that the logs it creates are pretty long since it logs all the post data.  That being said, I enhanced the log system
+     a bit.  I made it so that PayPal entries can be searched for in the drop down box.  I also made the top of the logs list a tpl file as well.  This simplifies the ability to
+     add more things to search for and makes editing it a lot easier.  I made it so you can delete individual logs or purge the entire list of logs.  (It asks for confirmation before
+     deleting the full list.  Also, I made it show a link to "View More" which allows you to see the whole log entry you wish to view.  I had to truncate the logged message in the list
+     because PayPal generates long log files.  So, in the list of logs, you can see up to 100 characters of the log.  When you view the log, you'll see everything for that entry.
+15.) The Client's home page now shows their username and last login time.
+16.) You can now remove invoices.  Cron checks if the user has an invoice or not and will generate one due 30 days in the future if there isn't an unpaid invoice for the user, so this
+     won't wind up with accidental terminations, but marking them as paid really is the best way to circumvent having them pay the bill (again?) and deleting them was implemented to
+     prune old invoices and remove invoices from users who no longer are in the DB.  I also made the <h2> text, <h3>, to make it more appealing to look at on the invoice pages.
+17.) The text that shows at the end of the order page when the account has been created, will now show for 3 seconds before the timeout redirects the customer to the payment for paid
+     accounts.  The other types of accounts were not redirected.
+18.) I created a template file for the errors.  I added error_lg.png to the icons directory and styled the errors.  Now they don't look like it was just thrown on the page.  This way
+     if a customer sees an error, it won't look crappy.  ;)  lol
+19.) I made it so packages can only be made P2H if a forum for P2H exists.  (Meaning I took away the option for P2H in the add/edit packages view when no forums exist.)
+20.) Clients can reply to closed tickets now and change the status of their own tickets.  Clients can also delete their own tickets as well.
+21.) I combined tickets.php and ticketsall.php into just tickets.php with a mode.  No sense in having two pages for that.
+22.) You now can add the IP of the server, its name servers, the cPanel port, and the WHM/DA port while adding a server.  These also show as variables in the email templates
+     for new account creations and awaiting server validation.
+23.) I made it so that the password reset emails, new invoice emails, ticket system emails, and client awaiting validation emails, all have a variable called %LINK% that you can
+     add to the email template to show a link to where they can view the item or they can login at.  The account suspended emails now also contain the %REASON% variable.
+24.) When you add or edit packages, TinyMCE will be in advanced mode instead of just having it in advanced mode when you add a package.  Advanced mode has more controls than simple
+     mode.
+25.) The installer has the sql directory and the template files in the installer directory now, as well as the installer functions moved from ajax.php.
+26.) I made it so you can set the date that warning messages are sent out when a user is below the post requirements of a P2H package.  The system had it set at 20 and so, I made
+     a section called "General Configuration" under the P2H settings so that you can set that date yourself.
+27.) I re-wrote the new invoice template to make it more polite.  Instead of demanding in a rude way that they log in and pay you, I made the default message thank the user for hosting their
+     website with you and the invoice notice is in there as well.
+28.) I made it so you can enter a custom directory to redirect to.  You can even set it dynamically.  Set this in the General Settings -> General Configuration area.  This allows for tighter
+     integration with your website and it also gives you the ability to expand THT and redirect to the directory you just created.
+29.) I made it so that if WHM or DA issue an error during signup, it will be prefixed with WHM Error: or DA Error: so people know that it might not be something they did wrong in their signup
+     process.
+30.) The %INFO% variable will now show "Welcome to Site Name" and then "Login" under that, for the login screens instead of being blank.
+31.) I made all the email templates file based.  This allows for easier off-site editing.  Plus, if you would rather not have wacked out code from TinyMCE being used, but rather easy
+     to edit templates with quality HTML, then you can create your own in a file and upload it instead of having to put it all in the DB.  I also moved the descriptions in there to
+     templates as well so its easier to edit those when new variables are added.  The templates for these are now in /includes/tpl/email and the name of the email template is the same
+     as the name of the template file.  The template description for each of them is in TEMPLATENAME_descrip.tpl in the same directory.  This should make cross referencing them and
+     creating new templates, much easier.  The DB table still exists to provide the name, subject, and ACP visual fields.  Also, TinyMCE refuses to preserve the whitespace in the HTML
+     formatting and they blatently said they won't provide that option because IE wouldn't support it.  That's not the case obviously, because you can view the source in IE and see formatted
+     HTML.  If you ask me, they just don't feel like fixing the problem.  (See below for a quote from the main dev of TinyMCE.)
+32.) I made the forum posts notification in the client area sound better when you read it.  It sounded like someone who speaks a foreign language wrote it, so I figured I'd make it flow better.
+33.) I re-wrote many of the email templates to give a more robust feel to them.  The welcome emails now show much more information.
+34.) I separated the reseller welcome emails (admin validation and non-admin validation) from the non-reseller account emails.  This allows you to send the resellers information more specific to
+     them without sending non-resellers unuseful information.
+35.) I created a blank conf.inc.php to ship with this version.
+36.) I added a slightly modified version of Blue Lust as the default theme.  It's released under the Creative Commons license.  You can read the license at
+     http://creativecommons.org/licenses/by-nc/3.0/legalcode
+37.) You can now turn off access to paid and P2H coptions for staff accounts.
+38.) You can now change the category for an article when you edit it.
+     
+
+TinyMCE Dev Quote:
+-----------
+There is no option and there will never be a option for preserving whitespace as long as IE 6, 7 and 8 is around. These browsers doesn't parse white space nodes into the DOM so there for it isn't
+there when the DOM tree is serialized. Also if a user for example pastes in contents should the white space be preserved then to. So it's mixed? If they type in contents add a few lines then what?
+And so on, as you can see it's a very complex thing.
+
+We removed the support for the apply_source_formatting option a few versions back since it was taking more CPU of the client computer than it was worth. We might add it in the future but this time
+as a plugin since this is something I wouldn't use my self.
+
+Best regards,
+Spocke - Main developer of TinyMCE
+
+Source: http://www.tinymce.com/forum/viewtopic.php?id=20183
+Date of the post: 02-09-2010
+-----------
+
+NOTE: The Custom Order fields bit has not been finished yet, so I left it alone.  Its in there, but it won't work.  The add new field link is an empty
+function and I tried dummy content to edit and that failed.  I think its best to just wait it out on that and I'll post it as an update later on.
+I removed the MySQL queries from install.sql and upgrade.sql so there wouldn't be a pointless link to it.  I removed the "extra" column from the users table
+and the "custom_fields" column from packages as well.
+
+
+
+Ideas the THT team could implement to make THT better:
+
+1.) Create a way to use different payment methods.  Basically, just set that in the admin area and make the order form show payment options at the end of checkout process.
+    As everything is streamlined through the payment class, you just need to use a switch to select the proper method and process it that way.  Having an option of P2H
+    instead of payment of money instead of P2H being used or money being used, might satisfy some needs as well.
+2.) As I fixed all the bugs in 1.3, PLEASE build off of this release!  I didn't just spend all day every day for around 2 weeks (even pulling an all nighter and coding two days
+    straight in there twice) to see other releases being built with the same bugs.  I did this to help THT succeed and to finally have a stable OS hosting management system on the market.
+    Its been pretty easy to code for and if you'd like me on the team for future improvements, I'm willing to help donate my time when I can do so.  I redid the newest version I could
+    in the trunk builds so that we wouldn't be repairing things that were repaired already.  As this one is more stable than any other version and has the most complete set of features,
+    I'd like to keep building off of this one and adding new releases like this.  2.0 Was up next I was told, but hasn't been worked on a lot and I was told it would be scrapped. So,
+    let's build THT 2.0 off of this one and create many new features for it.
+3.) I'd like to see the custom order forms section completed.  I don't know JS very well, but I know PHP like the back of my hand.  (Not RegEx, though.)  So, I'd be of use in the
+    area of PHP/MySQL/HTML/Templating moreso than JS and Regex.  I'd like to help you with this section, but its not something I know how to do right now.
+4.) Use a re-captcha on the order page instead of the catcha that's there.  (Its more secure for some reason I heard.)
+5.) Add the ability to register a domain.  (People can use different services like resellerclub.com or the like in order to sell domains through THT.  They just have to enter their
+    credentials.  They should be able to sell domains with or without a package to registered or unregistered users (product addon upgrade) and should be able to set the prices for the
+    domains and extensions they wish to sell/give away.  They could make the domains for sale, but the package free.
+6.) Dynamically check the user's email address to see if its a real email address.  You use the reciept header and check it though SMTP.
+7.) Make all SMTP mail go through PHPMailer instead of Pear since everyone can use PHPMailer, but not all servers have Pear on them.
+8.) Make it so the admins can resend or send template based emails to the clients.  This means that they can resend welcome letters, or create their own templates and send those
+    to people as well.  (That can be done in the mass mailling area as well as for the individual clients.)
+9.) Make it so admins can create custom variables for emails.  (Ex. They can create avariable with set text or they can use other variables in the text that will get parsed.  We could loop
+    the text entered and keep checking to see if there are two % signs with only text (no white space) between them.  If there's another variable we replace it.  This means, we can have
+    unlimited custom variable depth.  However, in case they accidentally create an endless loop, we need to put a check in place when they enter the message text or variables' text.
+    Depending on how far you want to take it, it could be a table in the DB with different replacements or it could even ask for the table column and other things and have it show them
+    that way.  (Ex. A config value could be chosen and the row would be pulled with the $db->config() function.)
+10.) Make the email templates parsed and sent through one function.  Consolidating them will make it easier to see what we're doing when programming it.  Some variables can be centralized
+     in one DB table.
+11.) Make it so all the responses like errors and "Forum added!" types of messages end in a period instead of an exclamation point.  It looks crappy when everything is over emphasized.
+12.) The ability to change the user to a different package in the admin area.
+13.) Take out all the unused code and unused MySQL columns.
+14.) Check what IP is registering when they sign up and log it so the admins can block an IP from signing up.  (This could prevent automated signups from spammers/scammers.)
+15.) Admins should be able to credit the person's account.  (For now you could mark invoices as paid and arrange something with the customer where they pay a separate invoice through paypal.
+     It works, but its more work than it needs to be.)
+16.) Make it so you can select a billing cycle and an innitial amount and reoccuring amount.  This way you can have setup fees or domain fees or whatnot and then the billing cycle.
+17.) Make it so admins can create and edit invoices.

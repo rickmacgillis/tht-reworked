@@ -1,0 +1,10 @@
+{
+    "name": "bitapihub/tht-reworked",
+    "type": "project",
+    "description" : "The Hosting Tool Reworked web hosting management solution",
+    "keywords": ["web hosting", "tht", "PHP"],
+    "license": "Gnu GPL v3.0",
+    "require": {
+        "php": "~5.3.0"
+    }
+}
