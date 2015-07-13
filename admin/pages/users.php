@@ -1,598 +1,1139 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
-// Admin Area - General Settings
-// By Jonny H
+// The Hosting Tool Reworked
+// Admin Area - Clients
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
 
 //Check if called by script
-if(THT != 1){die();}
+if(THT != 1){
 
-class page {
-        
-        public $navtitle;
-        public $navlist = array();
-                                                        
-        public function __construct() {
-                $this->navtitle = "Clients Sub Menu";
-                $this->navlist[] = array("Search Clients", "magnifier.png", "search");
-                $this->navlist[] = array("Client Statistics", "book.png", "stats");
-                $this->navlist[] = array("Admin Validate", "user_suit.png", "validate");
-                $this->navlist[] = array("Approve Upgrades", "accept.png", "upgrade");
-        }
-        
-        public function description() {
-                global $db, $main;
-                $query = $db->query("SELECT * FROM `<PRE>users` ORDER BY `signup` DESC");
-                if($db->num_rows($query) != 0) {
-                        $data = $db->fetch_array($query);
-                        $newest = $main->sub("Latest Signup:", $data['user']);
-                }
-                return "<strong>Clients</strong><br />
-                This is the area where you can manage all your clients that have signed up for your service. You can perform a variety of tasks like suspend, terminate, email and also check up on their requirements and stats.". $newest;        
-        }
-        
-        public function content() { # Displays the page 
-                global $main;
-                global $style;
-                global $db;
-                global $server;
-                global $email;
-                global $type;
-                global $sdk;
-                global $navens_upgrade;
-                switch($main->getvar['sub']) {
-                        default:
-                                if($main->getvar['do'] ) {
-                                        if($main->postvar['submitnewpack']){
-                                            $new_pack    = $main->postvar['newpackage'];
-                                            $immediately = $main->postvar['immediately'];
-                                            $userid      = $main->getvar['do'];
-                                            if(is_numeric($new_pack) && is_numeric($userid)){
-
-                                                $upack_info = $sdk->uidtopack($userid);
-                                                if($upack_info['packages']['id'] == $new_pack){
-                                                    $main->errors("The user is already on the package specified.  Please choose a different package if you wish to change their package.");
-                                                }else{
-                                                    $new_pack_info = $sdk->tdata("packages", "id", $new_pack);
-                                                    
-                                                    if($new_pack_info['server'] != $upack_info['packages']['server']){
-                                                        $new_server = 1;
-                                                    }
-
-                                                    if(!$immediately){
-                                                        $response = $navens_upgrade->prorate($new_pack, "", $userid, 1);
-                                                        if($response == "now"){
-                                                            $immediately = 1;
-                                                        }
-                                                        if(substr_count($response, "check")){
-                                                            $no_upgrade = 1;
-                                                        }
-                                                    }
-
-                                                    if($immediately){
-                                                        if($new_server){
-                                                            $flags = "7";
-                                                            $message = "The user has been upgraded and is now <font color = '#779500'>on the new server</font>.  Please be sure to remove the account on the old server when the user has migrated their website.";
-                                                            
-                                                        }else{
-                                                            $flags = "0";
-                                                            $message = "The user has been upgraded.";
-                                                        }
-                                                    }else{
-                                                        if($new_server){
-                                                            $flags = "4";
-                                                            $message = "The user has been prepared for their upgrade <font color = '#779500'>on the new server</font> at the end of their current billing cycle.";
-                                                        }else{
-                                                            $flags = "1";
-                                                            $message = "The user has been prepared for their upgrade at the end of their current billing cycle.";
-                                                        }
-                                                    }
-
-                                                    if($no_upgrade){
-                                                        $main->errors("The user cannot be changed to a P2H package until they have entered their credentials.  To do this, have the user log in and try to upgrade to the P2H package.  If the upgrade fails, the credentials are saved and you'll be able to upgrade them using this method.  If the upgrade succeeds, you don't need to do anything.  If the upgrade requires your approval, you'll be notified via email.");
-                                                    }else{
-                                                        $existing_upgrade = $sdk->tdata("mod_navens_upgrade", "uid", $userid);
-                                                        if($existing_upgrade){
-                                                            $db->query("UPDATE <PRE>mod_navens_upgrade SET created = '".time()."', newpack = '".$new_pack."', flags = '".$flags."' WHERE id = '".$existing_upgrade['id']."' LIMIT 1");
-                                                        }else{
-                                                            $db->query("INSERT INTO <PRE>mod_navens_upgrade SET created = '".time()."', newpack = '".$new_pack."', flags = '".$flags."', uid = '".$userid."'");
-                                                        }
-                                                        $existing_upgrade = $sdk->tdata("mod_navens_upgrade", "uid", $userid);
-                                                        
-                                                        $done = $navens_upgrade->upgrade($existing_upgrade['id'], "Update", 1);
-                                                        if($done === false){
-                                                            $db->query("DELETE FROM <PRE>mod_navens_upgrade WHERE id = '".$existing_upgrade['id']."' LIMIT 1");
-                                                            echo "<br><br>";
-                                                        }else{
-                                                            $main->errors($message);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                
-                                        $client = $db->client($main->getvar['do']);
-                                        $pack2 = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `userid` = '{$main->getvar['do']}'");
-                                        $pack = $db->fetch_array($pack2);
-                                        switch ($main->getvar['func']) {
-                                                case "sus":
-                            if(!empty($main->getvar['reason'])) {
-                                                                $command = $server->suspend($pack['id'], $main->getvar['reason']);
-                            }
-                            else {
-                                                                $command = $server->suspend($pack['id']);
-                            }
-                                                        if($command === true) {
-                                                                $main->errors("User has been suspended!");        
-                                                        }
-                                                        else {
-                                                                $main->errors($command);
-                                                        }
-                                                        break;
-                                                        
-                                                case "unsus":
-                                                        $command = $server->unsuspend($pack['id']);
-                                                        if($command == true) {
-                                                                $main->errors("User has been unsuspended!");        
-                                                        }
-                                                        else {
-                                                                $main->errors($command);
-                                                        }
-                                                        break;
-                                                        
-                                                case "cancel":
-                                                        if(!empty($main->getvar['reason'])) {
-                                                                $command = $server->cancel($pack['id'], $main->getvar['reason']);
-                            }
-                            else {
-                                                                $command = $server->cancel($pack['id']);
-                            }
-                                                        if($command == true) {
-                                                                $main->errors("User has been cancelled!");
-                                                                $main->done();
-                                                        }
-                                                        else {
-                                                                $main->errors($command);
-                                                        }
-                                                        break;
-                                                
-                                                case "term":
-                                                        if(!empty($main->getvar['reason'])) {
-                                                                $command = $server->terminate($pack['id'], $main->getvar['reason']);
-                            }
-                            else {
-                                                                $command = $server->terminate($pack['id']);
-                            }
-                                                        if($command == true) {
-                                                                $main->errors("User has been terminated!");
-                                                                $main->done();
-                                                        }
-                                                        else {
-                                                                $main->errors($command);
-                                                        }
-                                                        break;
-                                        }
-                                }
-                                if($main->getvar['do'] ) {
-                                        $client = $db->client($main->getvar['do']);
-                                        $pack2 = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `userid` = '{$main->getvar['do']}'");
-                                        $pack = $db->fetch_array($pack2);
-                                }
-                                if($main->getvar['do'] ) {
-                                        if($pack['status'] == "2") {
-                                                $array['SUS'] = "Unsuspend";
-                                                $array['FUNC'] = "unsus";
-                                                $array['IMG'] = "accept.png";
-                                        }
-                                        elseif($pack['status'] == "1") {
-                                                $array['SUS'] = "Suspend";
-                                                $array['FUNC'] = "sus";        
-                                                $array['IMG'] = "exclamation.png";
-                                        }
-                                        elseif($pack['status'] == "3") {
-                                                $array['SUS'] = "<a href='?page=users&sub=validate'>Validate</a>";
-                                                $array['FUNC'] = "none";        
-                                                $array['IMG'] = "user_suit.png";
-                                        }
-                                        elseif($pack['status'] == "4") {
-                                                $array['SUS'] = "Awaiting Payment";
-                                                $array['FUNC'] = "none";        
-                                                $array['IMG'] = "money.png";
-                                        }
-                                        elseif($pack['status'] == "9") {
-                                                $array['SUS'] = "No Action";
-                                                $array['FUNC'] = "none";        
-                                                $array['IMG'] = "cancel.png";
-                                        }
-                                        else {
-                                                $array['SUS'] = "Other Status";
-                                                $array['FUNC'] = "none";        
-                                                $array['IMG'] = "help.png";        
-                                        }
-                                        $array['ID'] = $main->getvar['do'];
-                                        switch($main->getvar['func']) {
-                                                default:
-                                                        $array2['DATE'] = $main->convertdate("n/d/Y", $client['signup']);
-                                                        $array2['EMAIL'] = $client['email'];
-                                                        $query = $db->query("SELECT * FROM `<PRE>packages` WHERE `id` = '{$db->strip($pack['pid'])}'");
-                                                        $data2 = $db->fetch_array($query);
-                                                        $array2['UPGRADEINFO'] = "";
-                                                        $existing_upgrade = $sdk->tdata("mod_navens_upgrade", "uid", $main->getvar['do']);
-                                                        $all_packs_query = $db->query("SELECT * FROM <PRE>packages WHERE is_disabled = '0' ORDER BY `type` ASC");
-                                                        while($all_packs_data = $db->fetch_array($all_packs_query)){
-                                                            $additional = $type->additional($all_packs_data['id']);
-                                                            $monthly    = $additional['monthly'];
-                                                            $signup     = $additional['signup'];
-
-                                                            unset($info);
-                                                            if($all_packs_data['type'] == "p2h") {
-                                                                $info = "[Signup Posts: ".$signup.", Monthly Posts: ".$monthly."] ";
-                                                            }
-                                                            elseif($all_packs_data['type'] == "paid") {
-                                                                $info = "[".$sdk->money($monthly)."] ";
-                                                            }
-            
-                                                            $packages[] = array("[".$all_packs_data['type']."] ".$info.$all_packs_data['name'], $all_packs_data['id']);
-                                                            
-                                                            if($existing_upgrade && $existing_upgrade['newpack'] == $all_packs_data['id']){
-                                                                if($all_packs_data['admin']){
-                                                                    $admin = " after you approve them";
-                                                                }
-                                                                
-                                                                if($existing_upgrade['flags'] && $existing_upgrade['flags'] < 5){
-                                                                    $next_cycle = " next billing cycle";
-                                                                }
-                                                                $array2['UPGRADEINFO'] = "NOTE: This user is slated for an upgrade to \"".$all_packs_data['name']."\"".$next_cycle.$admin.".<br><br>"; //I iz smart.  =)
-                                                            }
-                                                        }
-                                                        
-                                                        $array2['PACKAGE'] = $main->dropdown("newpackage", $packages, $pack['pid']);
-                                                        $array2['USER'] = $client['user'];
-                                                        $array2['DOMAIN'] = $client['domain'];
-                                                        $array2['CLIENTIP'] = $client['ip'];
-                                                        $array2['FIRSTNAME'] = $client['firstname'];
-                                                        $array2['LASTNAME'] = $client['lastname'];
-                                                        $array2['ADDRESS'] = $client['address'];
-                                                        $array2['CITY'] = $client['city'];
-                                                        $array2['STATE'] = $client['state'];
-                                                        $array2['ZIP'] = $client['zip'];
-                                                        $array2['COUNTRY'] = strtolower($client['country']);
-                                                        $array2['FULLCOUNTRY'] = $main->country_code_to_country($client['country']);
-                                                        $array2['PHONE'] = $client['phone'];
-                                                        $invoicesq = $db->query("SELECT * FROM `<PRE>invoices` WHERE `uid` = '{$db->strip($client['id'])}' AND `is_paid` = '0'");
-                                                        $array2['INVOICES'] = $db->num_rows($invoicesq);
-                                                        switch($pack['status']) {
-                                                                default:
-                                                                        $array2['STATUS'] = "Other";
-                                                                        break;
-                                                                        
-                                                                case "1":
-                                                                        $array2['STATUS'] = "Active";
-                                                                        break;
-                                                                        
-                                                                case "2":
-                                                                        $array2['STATUS'] = "Suspended";
-                                                                        break;
-                                                                        
-                                                                case "3":
-                                                                        $array2['STATUS'] = "Awaiting Validation";
-                                                                        break;
-                                                                
-                                                                case "4":
-                                                                        $array2['STATUS'] = "Awaiting Payment";
-                                                                        break;
-                                                                
-                                                                case "9":
-                                                                        $array2['STATUS'] = "Cancelled";
-                                                                        break;
-                                                        }
-                                                        $class = $type->determineType($pack['pid']);
-                                                        $phptype = $type->classes[$class];
-                                                        if($phptype->acpBox) {
-                                                                $box = $phptype->acpBox();        
-                                                                $array['BOX'] = $main->sub($box[0], $box[1]);
-                                                        }
-                                                        else {
-                                                                $array['BOX'] = "";        
-                                                        }
-                                                        $array['CONTENT'] = $navens_upgrade->tpl("admin/clientdetails.tpl", $array2);
-                                                        break;
-                                                        
-                                                case "email":
-                                                        if($_POST) {
-                                                                global $email;
-                                                                $result = $email->send($client['email'] ,$main->postvar['subject'], $main->postvar['content']);
-                                                                if($result) {
-                                                                        $main->errors("Email sent!");
-                                                                }
-                                                                else {
-                                                                        $main->errors("Email was not sent out!");
-                                                                }
-                                                        }
-                                                        $array['BOX'] = "";
-                                                        $array['CONTENT'] = $style->replaceVar("tpl/emailclient.tpl");
-                                                        break;
-                                                case "passwd":
-                                                        $array['MSG'] = "This will change the user's password in ALL accounts.  (THT, WHM/DirectAdmin, and cPanel, FTP, etc.)<br><br>";
-                                                        if($_POST) {
-                                                                if(empty($main->postvar['passwd'])) {
-                                                                        $main->errors('A password was not provided.');
-                                                                        $array['BOX'] = "";
-                                                                        $array['CONTENT'] = $style->replaceVar("tpl/clientpwd.tpl", $array);
-                                                                }
-                                                                else {
-                                                                        $command = $main->changeClientPassword($pack['id'], $main->postvar['passwd']);
-                                                                        if($command === true) {
-                                                                                $main->errors('Password changed!');
-                                                                        }
-                                                                        else {
-                                                                                $main->errors((string)$command);
-                                                                        }
-                                                                }
-                                                        }
-                                                        $array['BOX'] = "";
-                                                        $array['CONTENT'] = $style->replaceVar("tpl/clientpwd.tpl", $array);
-                                                        break;
-                                        }
-                                        $array["URL"] = URL;
-                                        $array['USER'] = $client['user'];
-                                        echo $style->replaceVar("tpl/clientview.tpl", $array);
-                                }
-                                else {
-                                        $array['NAME'] = $db->config("name");
-                                        $array['URL'] = $db->config("url");
-                                        $values[] = array("Admin Area", ADMINDIR);
-                                        $values[] = array("Order Form", "order");
-                                        $values[] = array("Client Area", "client");
-                                        $array['DROPDOWN'] = $main->dropDown("default", $values, $db->config("default"));
-                                        echo $style->replaceVar("tpl/clientsearch.tpl", $array);
-                                }
-                                break;
-                        
-                        //Displays a list of users based on account status.
-                        case "list":
-                                echo "<div class=\"subborder\"><form id=\"filter\" name=\"filter\" method=\"post\" action=\"\"><select size=\"1\" name=\"show\"><option value=\"all\">ALL</option><option value=\"1\">Active</option><option value=\"0\">Awaiting Validation</option><option value=\"2\">Suspended</option><option value=\"9\">Cancelled</option></select><input type=\"submit\" name=\"filter\" id=\"filter\" value=\"Filter Accounts\" /></form><table width=\"100%\" cellspacing=\"2\" cellpadding=\"2\" border=\"1\" style=\"border-collapse: collapse\" bordercolor=\"#000000\"><tr bgcolor=\"#EEEEEE\">";
-                                echo "<td width=\"100\" align=\"center\" style=\"border-collapse: collapse\" bordercolor=\"#000000\">Date Registered</td><td width=\"100\" align=\"center\" style=\"border-collapse: collapse\" bordercolor=\"#000000\">Username</td><td align=\"center\" style=\"border-collapse: collapse\" bordercolor=\"#000000\">E-mail</td></tr>";
-                                $l = $main->getvar['l'];
-                                $p = $main->getvar['p'];
-                                if (!$main->postvar['show'] && !$main->getvar['show']) {
-                                        $show = "all";
-                                }
-                                if (!$main->postvar['show']) {
-                                        $show = $main->getvar['show'];
-                                }
-                                else {
-                                        $show = $main->postvar['show'];
-                                        $p = 0;
-                                }
-                                if (!($l)) {
-                                        $l = 10;
-                                }
-                                if (!($p)) {
-                                        $p = 0;
-                                }
-                                if ($show != "all") {
-                                        $query = $db->query("SELECT * FROM `<PRE>users` WHERE `status` = '$show'");
-                                }
-                                else {
-                                        $query = $db->query("SELECT * FROM `<PRE>users`");
-                                }
-                                $pages = intval($db->num_rows($query)/$l);
-                                if ($db->num_rows($query)%$l) {
-                                        $pages++;
-                                }
-                                $current = ($p/$l) + 1;
-                                if (($pages < 1) || ($pages == 0)) {
-                                        $total = 1;
-                                }
-                                else {
-                                        $total = $pages;
-                                }
-                                $first = $p + 1;
-                                if (!((($p + $l) / $l) >= $pages) && $pages != 1) {
-                                        $last = $p + $l;
-                                }
-                                else{
-                                        $last = $db->num_rows($query);
-                                }
-                                if ($show != "all") {
-                                        $query2 = $db->query("SELECT * FROM `<PRE>users` WHERE `status` = '$show' ORDER BY `user` ASC LIMIT $p, $l");
-                                }
-                                else {
-                                        $query2 = $db->query("SELECT * FROM `<PRE>users` ORDER BY `user` ASC LIMIT $p, $l");
-                                }
-                                if ($db->num_rows($query2) == 0) {
-                                        echo "No accounts found.";
-                                }
-                                else {
-                                        while($data = $db->fetch_array($query2)) {
-                                                $array['ID'] = $data['id'];
-                                                $array['USER'] = $data['user'];
-                                                $array['EMAIL'] = $data['email'];
-                                                $array['DATE'] = $main->convertdate("n/d/Y", $data['signup']);
-                                        echo $style->replaceVar("tpl/clientlist.tpl", $array);
-                                        }
-                                }
-                                echo "</table></div>";
-                                echo "<center>";
-                                if ($p != 0) {
-                                        $back_page = $p - $l;
-                                        echo("<a href=\"$PHP_SELF?page=users&sub=list&show=$show&p=$back_page&l=$l\">BACK</a>    \n");
-                                }
-
-                                for ($i=1; $i <= $pages; $i++) {
-                                        $ppage = $l*($i - 1);
-                                        if ($ppage == $p){
-                                                echo("<b>$i</b>\n");
-                                        }
-                                        else{
-                                                echo("<a href=\"$PHP_SELF?page=users&sub=list&show=$show&p=$ppage&l=$l\">$i</a> \n");
-                                        }
-                                }
-
-                                if (!((($p+$l) / $l) >= $pages) && $pages != 1) {
-                                        $next_page = $p + $l;
-                                        echo("    <a href=\"$PHP_SELF?page=users&sub=list&show=$show&p=$next_page&l=$l\">NEXT</a>");
-                                }
-                                echo "</center>";
-                                break;
-                                
-                        case "stats":
-                                $query = $db->query("SELECT * FROM `<PRE>users`");
-                                $array['CLIENTS'] = $db->num_rows($query);
-                                $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `status` = '1'");
-                                $array['ACTIVE'] = $db->num_rows($query);
-                                $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `status` = '2'");
-                                $array['SUSPENDED'] = $db->num_rows($query);
-                                $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `status` = '3'");
-                                $array['ADMIN'] = $db->num_rows($query);
-                                $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `status` = '9'");
-                                $array['CANCELLED'] = $db->num_rows($query);
-                                echo $style->replaceVar("tpl/clientstats.tpl", $array);
-                                break;
-                                
-                        case "validate":
-                                if($main->getvar['do']) {
-                                        if($main->getvar['accept'] == 1) {
-                                                if($server->approve($main->getvar['do'])) {
-                                                        $main->errors("Account activated!");
-                                                        $emaildata = $db->emailTemplate("approvedacc");
-                                                        $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `id` = '{$main->getvar['do']}'");
-                                                        $data = $db->fetch_array($query);
-                                                        $client = $db->client($data['userid']);
-                                                        $db->query("UPDATE `<PRE>users` SET `status` = '1' WHERE `id` = '{$client['id']}'");
-                                                        $email->send($client['email'], $emaildata['subject'], $emaildata['content']);
-                                                }
-                                        }
-                                        else {
-                                                $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `id` = '{$main->getvar['do']}'");
-                                                $data = $db->fetch_array($query);
-                                                $client = $db->client($data['userid']);
-                                                if($server->decline($main->getvar['do'])) {
-                                                        $main->errors("Account declined!");
-                                                }        
-                                        }
-                                }
-                                $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `status` = '3'");
-                                if($db->num_rows($query) == 0) {
-                                        echo "No clients are awaiting validation!";        
-                                }
-                                else {
-                                        $tpl .= "<ERRORS>";
-                                        while($data = $db->fetch_array($query)) {
-                                                $client = $db->client($data['userid']);
-                                                $array['USER'] = $client['user'];        
-                                                $array['EMAIL'] = $client['email'];
-                                                $array['DOMAIN'] = $data['domain'];
-                                                $array['ID'] = $data['id'];
-                                                $array['CLIENTID'] = $data['userid'];
-                                                $tpl .= $style->replaceVar("tpl/adminval.tpl", $array);
-                                        }
-                                        echo $tpl;
-                                }
-                                break;
-                                
-                                case "upgrade":
-                                    if(is_numeric($main->getvar['do'])){
-                                        $upgrade_stubid = $main->getvar['do'];
-                                        $upgrade_stub_data = $sdk->tdata("mod_navens_upgrade", "id", $upgrade_stubid);
-                                        $client = $db->client($upgrade_stub_data['uid']);
-                                        $user_data = $sdk->uidtopack($upgrade_stub_data['uid']);
-                                        $new_pack_data = $sdk->tdata("packages", "id", $upgrade_stub_data['newpack']);
-                                        
-                                        if($main->getvar['accept']){
-                                            switch($upgrade_stub_data['flags']){
-
-                                                case "2";
-                                                    $db->query("UPDATE <PRE>mod_navens_upgrade SET flags = '1' WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                                    $done = $navens_upgrade->upgrade($upgrade_stubid, "Update", 1);
-                                                    if($done === false){
-                                                        $db->query("UPDATE <PRE>mod_navens_upgrade SET flags = '2' WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                                        echo "<br><br>";
-                                                    }else{
-                                                        $main->errors("The user has been prepared for their upgrade at the end of their current billing cycle.<br>");
-                                                    }
-                                                break;
-
-                                                case "3";
-                                                    $db->query("UPDATE <PRE>mod_navens_upgrade SET flags = '4' WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                                    $done = $navens_upgrade->upgrade($upgrade_stubid, "Update", 1);
-                                                    if($done === false){
-                                                        $db->query("UPDATE <PRE>mod_navens_upgrade SET flags = '3' WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                                        echo "<br><br>";
-                                                    }else{
-                                                        $main->errors("The user has been prepared for their upgrade <font color = '#779500'>on the new server</font> at the end of their current billing cycle.<br>");
-                                                    }
-                                                break;
-
-                                                case "5";
-                                                    $db->query("UPDATE <PRE>mod_navens_upgrade SET flags = '0' WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                                    $done = $navens_upgrade->upgrade($upgrade_stubid, "Update", 1);
-                                                    if($done === false){
-                                                        $db->query("UPDATE <PRE>mod_navens_upgrade SET flags = '5' WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                                        echo "<br><br>";
-                                                    }else{
-                                                        $main->errors("The user has been upgraded.<br>");
-                                                    }
-                                                break;
-
-                                                case "6";
-                                                    $db->query("UPDATE <PRE>mod_navens_upgrade SET flags = '7' WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                                    $done = $navens_upgrade->upgrade($upgrade_stubid, "Update", 1);
-                                                    if($done === false){
-                                                        $db->query("UPDATE <PRE>mod_navens_upgrade SET flags = '6' WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                                        echo "<br><br>";
-                                                    }else{
-                                                        $main->errors("The user has been upgraded and is now <font color = '#779500'>on the new server</font>.  Please be sure to remove the account on the old server when the user has migrated their website.<br>");
-                                                    }
-                                                break;
-                                                
-                                            }
-                                        }else{
-                                            $db->query("DELETE FROM <PRE>mod_navens_upgrade WHERE id = '".$upgrade_stubid."' LIMIT 1");
-                                            $main->errors("The user's upgrade request has been denied.<br>");
-                                            
-                                            $deny_array['OLDPLAN']  = $user_data['packages']['name'];
-                                            $deny_array['NEWPLAN']  = $new_pack_data['name'];
-                                            $uemaildata = $db->emailTemplate("upgrade_denied");
-                                            $email->send($client['email'], $uemaildata['subject'], $uemaildata['content'], $deny_array);
-                                            $sdk->thtlog("Upgrade denied for ".$client['user']." <br><b>Current package: </b>".$user_data['packages']['name']." <br><b>Requested package: </b>".$new_pack_data['name'], $upgrade_stub_data['uid']);
-                                        }
-                                    }
-                                    
-                                    $query = $db->query("SELECT * FROM `<PRE>mod_navens_upgrade` WHERE flags = '2' OR flags = '3' OR flags = '5' OR flags = '6'");
-                                    if($db->num_rows($query) == 0) {
-                                        echo "<ERRORS>No clients are awaiting upgrade approval.";
-                                    }
-                                    else {
-                                        $tpl .= "<ERRORS>The users listed here have prequalified for upgrades, but admin approval was needed on the packages they selected.";
-                                        while($data = $db->fetch_array($query)) {
-                                                $client = $db->client($data['uid']);
-                                                $user_data = $sdk->uidtopack($data['uid']);
-                                                $new_pack_data = $sdk->tdata("packages", "id", $data['newpack']);
-                                                
-                                                if($data['flags'] == "2" || $data['flags'] == "3"){
-                                                    $array['EFFECTIVE'] = "Next Billing Cycle";
-                                                }else{
-                                                    $array['EFFECTIVE'] = "Immediately";
-                                                }
-
-                                                $array['USER']      = $client['user'];
-                                                $array['EMAIL']     = $client['email'];
-                                                $array['DOMAIN']    = $user_data['user_packs']['domain'];
-                                                $array['OLDPLAN']   = $user_data['packages']['name'];
-                                                $array['NEWPLAN']   = $new_pack_data['name'];
-                                                $array['NEWSERVER'] = $user_data['packages']['server'] != $new_pack_data['server'] ? "<font color = '#FF0055'>Yes</font>" : "<font color = '#779500'>No</font>";
-                                                $array['ID']        = $data['id'];
-                                                $array['CLIENTID']  = $data['uid'];
-                                                $tpl .= $navens_upgrade->tpl("admin/approve_upgrades.tpl", $array);
-                                        }
-                                        echo $tpl;
-                                    }
-                                break;
-                }
-        }
+    die();
+    
 }
+
+class page{
+
+    public $navtitle;
+    public $navlist = array();
+    
+    public function __construct(){
+
+        $this->navtitle  = "Clients Sub Menu";
+        $this->navlist[] = array("Search Clients", "magnifier.png", "search");
+        $this->navlist[] = array("Client Statistics", "book.png", "stats");
+        $this->navlist[] = array("Admin Validate", "user_suit.png", "validate");
+        $this->navlist[] = array("Approve Upgrades", "accept.png", "upgrade");
+        $this->navlist[] = array("Import Clients", "group_go.png", "import");
+        
+    }
+
+    public function description(){
+        global $dbh, $postvar, $getvar, $instance;
+		
+        $latest_signup_query = $dbh->select("users", 0, array("signup", "DESC"));
+        if($dbh->num_rows($latest_signup_query) != 0){
+
+            $latest_signup_data = $dbh->fetch_array($latest_signup_query);
+            $newest             = main::sub("Latest Signup:", $latest_signup_data['user']);
+            
+        }
+
+        return "<strong>Clients</strong><br />
+                This is the area where you can manage all your clients that have signed up for your service. You can perform a variety of tasks like suspend, terminate, email and also check up on their requirements and stats.".$newest;
+        
+    }
+
+    public function content(){
+        global $dbh, $postvar, $getvar, $instance;
+        
+        switch($getvar['sub']){
+
+            default:
+			
+				$this->ClientSearch();
+                break;
+            
+            //Displays a list of users based on account status. - Used for Client Stats
+            case "list":
+
+				$this->ListClientStatus();
+                break;
+            
+            case "stats":
+				
+				$this->ViewClientStatistics();
+                break;
+            
+            case "validate":
+
+				$this->ApproveClientSignups();
+                break;
+            
+            case "upgrade":
+
+				$this->ApproveClientUpgrades();
+                break;
+				
+            case "import":
+			
+				$this->ImportClients();
+                break;				
+                
+        }
+
+    }
+	
+	///////////////////////////////////////////////////
+	////
+	///  Client List Page - For Client Statistics
+	//
+	//////////////////////////
+	
+	private function ListClientStatus(){
+        global $dbh, $postvar, $getvar, $instance;
+                
+		$per_page = $getvar['limit'];
+		$start    = $getvar['start'];
+		$show     = $getvar['do'];
+		
+		if($postvar['show']){
+
+			$show = $postvar['show'];
+			
+		}
+
+		if(!$show){
+
+			$show = "all";
+			
+		}
+
+		if(!$per_page){
+
+			$per_page = 10;
+			
+		}
+
+		if(!$start){
+
+			$start = 0;
+			
+		}
+
+		if($show != "all"){
+
+			$users_query = $dbh->select("users", array("status", "=", $show), array("user", "ASC"), $start.", ".$per_page, 1);
+			
+		}else{
+
+			$users_query = $dbh->select("users", 0, array("user", "ASC"), $start.", ".$per_page, 1);
+			
+		}
+
+		if($dbh->num_rows($users_query) == 0){
+
+			$list_clients_array['CLIENTS'] = "";
+			$list_clients_array['PAGING']  = "";
+			main::errors("No accounts found.");
+			
+		}else{
+
+			while($usersdata = $dbh->fetch_array($users_query)){
+
+				$client_list_item_array['ID']    = $usersdata['id'];
+				$client_list_item_array['USER']  = $usersdata['user'];
+				$client_list_item_array['EMAIL'] = $usersdata['email'];
+				$client_list_item_array['DATE']  = main::convertdate("m/d/Y", $usersdata['signup']);
+				$list_clients_array['CLIENTS'] .= style::replaceVar("tpl/admin/clients/client-list-item.tpl", $client_list_item_array);
+				
+			}
+
+		}
+
+		if($start != 0){
+
+			$back_page                = $start - $per_page;
+			$list_clients_array['PAGING'] = '<a href="?page=users&sub=list&show='.$show.'&start='.$back_page.'&limit='.$per_page.'">BACK</a>';
+			
+		}
+
+		$pages = ceil($dbh->num_rows($users_query) / $per_page);
+		for($i = 1; $i <= $pages; $i++){
+
+			$start_link = $per_page * ($i - 1);
+			if($start_link == $start){
+
+				$list_clients_array['PAGING'] .= "<b>".$i."</b>";
+				
+			}else{
+
+				$list_clients_array['PAGING'] .= '<a href="?page=users&sub=list&show='.$show.'&start='.$start_link.'&limit='.$per_page.'">'.$i.'</a>';
+				
+			}
+
+		}
+
+		if(($start + $per_page) / $per_page < $pages && $pages != 1){
+
+			$next_page = $start + $per_page;
+			$list_clients_array['PAGING'] .= '<a href="?page=users&sub=list&show='.$show.'&start='.$next_page.'&limit='.$per_page.'">NEXT</a>';
+			
+		}
+
+		echo style::replaceVar("tpl/admin/clients/list-clients.tpl", $list_clients_array);
+	
+	}
+	
+	///////////////////////////////////////////////////
+	////
+	///  Client Statistics Page
+	//
+	//////////////////////////
+	
+	private function ViewClientStatistics(){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		$total_users_query              = $dbh->select("users");
+		$client_stats_array['CLIENTS'] = $dbh->num_rows($total_users_query);
+		
+		$active_users_query            = $dbh->select("users", array("status", "=", "1"), 0, 0, 1);
+		$client_stats_array['ACTIVE'] = $dbh->num_rows($active_users_query);
+		
+		$suspended_users_query            = $dbh->select("users", array("status", "=", "2"), 0, 0, 1);
+		$client_stats_array['SUSPENDED'] = $dbh->num_rows($suspended_users_query);
+		
+		$adminval_query               = $dbh->select("users", array("status", "=", "3"), 0, 0, 1);
+		$client_stats_array['ADMIN'] = $dbh->num_rows($adminval_query);
+		
+		$init_payment_query             = $dbh->select("users", array("status", "=", "4"), 0, 0, 1);
+		$client_stats_array['PAYMENT'] = $dbh->num_rows($init_payment_query);
+		
+		$confirm_query                 = $dbh->select("users", array("status", "=", "5"), 0, 0, 1);
+		$client_stats_array['CONFIRM'] = $dbh->num_rows($confirm_query);
+		
+		$canceled_users_query             = $dbh->select("users", array("status", "=", "9"), 0, 0, 1);
+		$client_stats_array['CANCELLED'] = $dbh->num_rows($canceled_users_query);
+		
+		echo style::replaceVar("tpl/admin/clients/client-stats.tpl", $client_stats_array);	
+	
+	}
+	
+	///////////////////////////////////////////////////
+	////
+	///  Client Sign Up Approval Page
+	//
+	//////////////////////////
+	
+	private function ApproveClientSignups(){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		if($getvar['do']){
+
+			$client = $dbh->client($getvar['do']);
+			
+			if($getvar['accept'] == 1){
+
+				if(server::approve($getvar['do'])){
+
+					$emaildata = email::emailTemplate("client-account-approved");
+					$dbh->update("users", array("status" => "1"), array("id", "=", $client['id']));
+					email::send($client['email'], $emaildata['subject'], $emaildata['content']);
+					main::errors("Account activated!");
+					
+				}
+
+			}else{
+
+				if(server::decline($getvar['do'])){
+
+					main::errors("Account declined!");
+					
+				}
+
+			}
+
+		}
+
+		$user_adminval_query = $dbh->select("users", array("status", "=", "3"), 0, 0, 1);
+		if($dbh->num_rows($user_adminval_query) == 0){
+
+			echo "No clients are awaiting validation!";
+			
+		}else{
+
+			$tpl .= "<ERRORS>";
+			while($user_adminval_data = $dbh->fetch_array($user_adminval_query)){
+
+				$admin_validate_array['USER']     = $user_adminval_data['user'];
+				$admin_validate_array['EMAIL']    = $user_adminval_data['email'];
+				$admin_validate_array['DOMAIN']   = $user_adminval_data['domain'];
+				$admin_validate_array['ID']       = $user_adminval_data['id'];
+				$admin_validate_array['CLIENTID'] = $user_adminval_data['id'];
+				$tpl .= style::replaceVar("tpl/admin/clients/admin-validate.tpl", $admin_validate_array);
+				
+			}
+
+			echo $tpl;
+			
+		}	
+	
+	}
+	
+	///////////////////////////////////////////////////
+	////
+	///  Client Upgrade Approval Page
+	//
+	//////////////////////////
+	
+	private function ApproveClientUpgrades(){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		if(is_numeric($getvar['do'])){
+
+			$upgrade_stubid    = $getvar['do'];
+			$upgrade_stub_data = $dbh->select("upgrade", array("id", "=", $upgrade_stubid));
+			$client            = $dbh->client($upgrade_stub_data['uid']);
+			$user_data         = main::uidtopack($upgrade_stub_data['uid']);
+			$new_pack_data     = $dbh->select("packages", array("id", "=", $upgrade_stub_data['newpack']));
+			
+			if($getvar['accept']){
+
+				switch($upgrade_stub_data['flags']){
+
+					case "2";
+						
+						$dbh->update("upgrade", array("flags" => "1"), array("id", "=", $upgrade_stubid), "1");
+						if(upgrade::do_upgrade($upgrade_stubid, "Update", 1) === false){
+
+							$dbh->update("upgrade", array("flags" => "2"), array("id", "=", $upgrade_stubid), "1");
+							echo "<br><br>";
+							
+						}else{
+
+							main::errors("The user has been prepared for their upgrade at the end of their current billing cycle.<br>");
+							
+						}
+
+						break;
+					
+					case "3";
+						$dbh->update("upgrade", array("flags" => "4"), array("id", "=", $upgrade_stubid), "1");
+						if(upgrade::do_upgrade($upgrade_stubid, "Update", 1) === false){
+
+							$dbh->update("upgrade", array("flags" => "3"), array("id", "=", $upgrade_stubid), "1");
+							echo "<br><br>";
+							
+						}else{
+
+							main::errors("The user has been prepared for their upgrade <font color = '#779500'>on the new server</font> at the end of their current billing cycle.<br>");
+							
+						}
+
+						break;
+					
+					case "5";
+						$dbh->update("upgrade", array("flags" => "0"), array("id", "=", $upgrade_stubid), "1");
+						if(upgrade::do_upgrade($upgrade_stubid, "Update", 1) === false){
+
+							$dbh->update("upgrade", array("flags" => "5"), array("id", "=", $upgrade_stubid), "1");
+							echo "<br><br>";
+							
+						}else{
+
+							main::errors("The user has been upgraded.<br>");
+							
+						}
+
+						break;
+					
+					case "6";
+						$dbh->update("upgrade", array("flags" => "7"), array("id", "=", $upgrade_stubid), "1");
+						if(upgrade::do_upgrade($upgrade_stubid, "Update", 1) === false){
+
+							$dbh->update("upgrade", array("flags" => "6"), array("id", "=", $upgrade_stubid), "1");
+							echo "<br><br>";
+							
+						}else{
+
+							main::errors("The user has been upgraded and is now <font color = '#779500'>on the new server</font>.  Please be sure to remove the account on the old server when the user has migrated their website.<br>");
+							
+						}
+
+						break;
+						
+				}
+
+			}else{
+
+				$dbh->delete("upgrade", array("id", "=", $upgrade_stubid), "1");
+				main::errors("The user's upgrade request has been denied.<br>");
+				
+				$deny_array['OLDPLAN'] = $user_data['packages']['name'];
+				$deny_array['NEWPLAN'] = $new_pack_data['name'];
+				$uemaildata            = email::emailTemplate("client-upgrade-denied");
+				email::send($client['email'], $uemaildata['subject'], $uemaildata['content'], $deny_array);
+				main::thtlog("Upgrade Denied", "Upgrade denied for ".$client['user']." <br><b>Current package: </b>".$user_data['packages']['name']." <br><b>Requested package: </b>".$new_pack_data['name'], $upgrade_stub_data['uid']);
+				
+			}
+
+		}
+
+		unset($where);
+		$where[] = array("flags", "=", "2", "OR");
+		$where[] = array("flags", "=", "3", "OR");
+		$where[] = array("flags", "=", "5", "OR");
+		$where[] = array("flags", "=", "6");
+		
+		$upgrade_req_query = $dbh->select("upgrade", $where, 0, 0, 1);
+		if($dbh->num_rows($upgrade_req_query) == 0){
+
+			echo "<ERRORS>No clients are awaiting upgrade approval.";
+			
+		}else{
+
+			$tpl .= "<ERRORS>The users listed here have prequalified for upgrades, but admin approval was needed on the packages they selected.";
+			while($upgrade_req_data = $dbh->fetch_array($upgrade_req_query)){
+
+				$client        = $dbh->client($upgrade_req_data['uid']);
+				$user_data     = main::uidtopack($upgrade_req_data['uid']);
+				$new_pack_data = $dbh->select("packages", array("id", "=", $upgrade_req_data['newpack']));
+				
+				if($upgrade_req_data['flags'] == "2" || $upgrade_req_data['flags'] == "3"){
+
+					$approve_upgrades_array['EFFECTIVE'] = "Next Billing Cycle";
+					
+				}else{
+
+					$approve_upgrades_array['EFFECTIVE'] = "Immediately";
+					
+				}
+
+				$approve_upgrades_array['USER']      = $client['user'];
+				$approve_upgrades_array['EMAIL']     = $client['email'];
+				$approve_upgrades_array['DOMAIN']    = $user_data['user_data']['domain'];
+				$approve_upgrades_array['OLDPLAN']   = $user_data['packages']['name'];
+				$approve_upgrades_array['NEWPLAN']   = $new_pack_data['name'];
+				$approve_upgrades_array['NEWSERVER'] = $user_data['packages']['server'] != $new_pack_data['server'] ? "<font color = '#FF0055'>Yes</font>" : "<font color = '#779500'>No</font>";
+				$approve_upgrades_array['ID']        = $upgrade_req_data['id'];
+				$approve_upgrades_array['CLIENTID']  = $upgrade_req_data['uid'];
+				$tpl .= style::replaceVar("tpl/admin/upgrades/approve-upgrades.tpl", $approve_upgrades_array);
+				
+			}
+
+			echo $tpl;
+			
+		}	
+	
+	}
+	
+	///////////////////////////////////////////////////
+	////
+	///  Client Import Page
+	//
+	//////////////////////////
+	
+	private function ImportClients(){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		$files = main::folderFiles(INC."/import/");
+		foreach($files as $value){
+
+			$filename_exp = explode(".", $value);			
+			include(INC."/import/".$value);
+			
+			$import_types[$filename_exp[0]] = new $filename_exp[0];
+			
+			$server_type = $import_types[$filename_exp[0]]->server;
+			$server_exists = $dbh->select("servers", array("type", "=", $server_type), 0, "1");
+			
+			if(!$server_type || ($server_type && $server_exists)){
+			
+				$values[] = array($import_types[$filename_exp[0]]->name, $filename_exp[0]);			
+			
+			}
+			
+		}
+
+		if(!$getvar['do']){
+
+			if($_POST){
+
+				main::redirect("?page=users&sub=import&do=".$postvar['do']);
+			
+			}
+
+			$import_array['DROPDOWN'] = main::dropdown("do", $values);
+			echo style::replaceVar("tpl/admin/import/import.tpl", $import_array);
+		
+		}else{
+
+			if($import_types[$getvar['do']]){
+
+				$import_types[$getvar['do']]->import();
+			
+			}else{
+
+				echo "That method doesn't exist.";
+			
+			}
+
+		}	
+	
+	}
+	
+	///////////////////////////////////////////////////
+	////
+	///  Client Search Page
+	//
+	//////////////////////////	
+	
+	private function ClientSearch(){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		if($getvar['do']){
+
+			if($postvar['submitnewpack']){
+
+				$this->ChangeClientPackage();
+
+			}
+
+			$client = $dbh->client($getvar['do']);
+			$client_view_array['ID'] = $client['id'];
+			$link = "?page=users&sub=search&do=".$getvar['do']."&func=";
+			
+			switch($client['status']){
+
+				default:
+					$client_view_array['TEXT'] = "Other Status";
+					$client_view_array['LINK'] = "";
+					$client_view_array['IMG']  = "help.png";
+					break;
+				
+				case '1':
+					$client_view_array['TEXT'] = "Suspend";
+					$client_view_array['LINK'] = $link."sus";
+					$client_view_array['IMG']  = "exclamation.png";
+					break;
+				
+				case '2':
+					$client_view_array['TEXT'] = "Unsuspend";
+					$client_view_array['LINK'] = $link."unsus";
+					$client_view_array['IMG']  = "accept.png";
+					break;
+				
+				case '3':
+					$client_view_array['TEXT'] = "Validate";
+					$client_view_array['LINK'] = "?page=users&sub=validate";
+					$client_view_array['IMG']  = "user_suit.png";
+					break;
+				
+				case '4':
+					$client_view_array['TEXT'] = "Awaiting Payment";
+					$client_view_array['LINK'] = "";
+					$client_view_array['IMG']  = "money.png";
+					break;
+				
+				case '5':
+					$client_view_array['TEXT'] = "Awaiting Email Confirmation";
+					$client_view_array['LINK'] = $link."confirm";
+					$client_view_array['IMG']  = "email.png";
+					break;
+				
+				case '9':
+					$client_view_array['TEXT'] = "No Action";
+					$client_view_array['LINK'] = "";
+					$client_view_array['IMG']  = "cancel.png";
+					break;
+					
+			}
+			
+			switch($getvar['func']){
+
+				default:
+
+					if(!$client_view_array['CONTENT']){
+
+						$client_view_array = array_merge($client_view_array, $this->ViewClient($client));
+					
+					}
+					
+					break;
+			
+				case "sus":
+					
+					$response = $this->SuspendClient($client);
+					if($response){
+					
+						$client_view_array = array_merge($client_view_array, $response);
+					
+					}
+					
+					break;
+				
+				case "unsus":
+
+					$this->UnsuspendClient($client);
+					break;
+				
+				case "cancel":
+
+					$response = $this->CancelClient($client);
+					if($response){
+					
+						$client_view_array = array_merge($client_view_array, $response);
+					
+					}
+					
+					break;
+				
+				case "term":
+					
+					$response = $this->TerminateClient($client);
+					if($response){
+					
+						$client_view_array = array_merge($client_view_array, $response);
+					
+					}
+					
+					break;
+				
+				case "email":
+
+					$client_view_array = array_merge($client_view_array, $this->EmailClient($client));
+					break;
+					
+				case "passwd":
+
+					$client_view_array = array_merge($client_view_array, $this->ChangePassword($client));
+					break;
+		
+				case 'freeuser':
+				
+					$this->MakeFreeClient($client);
+					break;
+		
+				case 'confirm':
+		
+					$this->ConfirmClientEmail($client);
+					break;
+					
+				case "loginas":
+					
+					$this->LoginAsClient($client);
+					break;
+					
+			}
+
+			$client_view_array["URL"]  = URL;
+			$client_view_array['USER'] = $client['user'];	
+					
+			$freeuser = 0;
+			
+			if($client['freeuser']){
+			
+				$freeuser = 1;
+			
+			}
+
+			if($freeuser){
+			
+				$client_view_array['FREE_USER'] = "no";
+				$client_view_array['NON_FREE']  = "Non-";
+			
+			}else{
+			
+				$client_view_array['FREE_USER'] = "yes";
+				$client_view_array['NON_FREE']  = "";
+			
+			}
+			
+			echo style::replaceVar("tpl/admin/clients/client-view.tpl", $client_view_array);
+			
+		}else{
+
+			$client_search_array['URL'] = $dbh->config("url");
+			echo style::replaceVar("tpl/admin/clients/client-search.tpl", $client_search_array);
+			
+		}	
+	
+	}
+	
+	private function ChangeClientPackage(){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		$new_pack    = $postvar['newpackage'];
+		$immediately = $postvar['immediately'];
+		$userid      = $getvar['do'];
+		if(is_numeric($new_pack) && is_numeric($userid)){
+
+			$upack_info = main::uidtopack($userid);
+			if($upack_info['packages']['id'] == $new_pack){
+
+				main::errors("The user is already on the package specified.  Please choose a different package if you wish to change their package.");
+				
+			}else{
+
+				$new_pack_info = $dbh->select("packages", array("id", "=", $new_pack));
+				
+				if($new_pack_info['server'] != $upack_info['packages']['server']){
+
+					$new_server = 1;
+					
+				}
+
+				if(!$immediately || $new_pack_info['type'] == "p2h"){
+
+					$response = upgrade::prorate($new_pack, "", $userid, 1);
+					if($response == "now"){
+
+						$immediately = 1;
+						
+					}
+
+					if(substr_count($response, "check")){
+
+						$no_upgrade = 1;
+						
+					}
+
+				}
+
+				if($immediately){
+
+					if($new_server){
+
+						$flags   = "7";
+						$message = "The user has been upgraded and is now <font color = '#779500'>on the new server</font>.  Please be sure to remove the account on the old server when the user has migrated their website.";
+						
+					}else{
+
+						$flags   = "0";
+						$message = "The user has been upgraded.";
+						
+					}
+
+				}else{
+
+					if($new_server){
+
+						$flags   = "4";
+						$message = "The user has been prepared for their upgrade <font color = '#779500'>on the new server</font> at the end of their current billing cycle.";
+						
+					}else{
+
+						$flags   = "1";
+						$message = "The user has been prepared for their upgrade at the end of their current billing cycle.";
+						
+					}
+
+				}
+
+				if($no_upgrade){
+
+					main::errors("The user cannot be changed to a P2H package until they have entered their credentials.  To do this, have the user log in and try to upgrade to the P2H package.  If the upgrade fails, the credentials are saved and you'll be able to upgrade them using this method.  If the upgrade succeeds, you don't need to do anything.  If the upgrade requires your approval, you'll be notified via email.");
+					
+				}else{
+
+					$existing_upgrade = $dbh->select("upgrade", array("uid", "=", $userid));
+					if($existing_upgrade){
+
+						$upgrade_update = array(
+							"created" => time(),
+							"newpack" => $new_pack,
+							"flags"   => $flags
+						);
+						
+						$dbh->update("upgrade", $upgrade_update, array("id", "=", $existing_upgrade['id']), "1");
+						
+					}else{
+
+						$upgrade_insert = array(
+							"created" => time(),
+							"newpack" => $new_pack,
+							"flags"   => $flags,
+							"uid"     => $userid
+						);
+						
+						$dbh->insert("upgrade", $upgrade_insert);
+						
+					}
+
+					$existing_upgrade = $dbh->select("upgrade", array("uid", "=", $userid));
+					
+					$done = upgrade::do_upgrade($existing_upgrade['id'], "Update", 1);
+					if($done === false){
+
+						$dbh->delete("upgrade", array("id", "=", $existing_upgrade['id']), "1");
+						echo "<br><br>";
+						
+					}else{
+
+						main::errors($message);
+						
+					}
+
+				}
+
+			}
+
+		}	
+	
+	}
+	
+	///////////////////////////////////////////////////
+	////
+	///  Client View You Screwed Me Functions
+	//
+	//////////////////////////
+	
+	private function SuspendClient($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		if(!$postvar['submitreason']){
+
+			$reason_array['WARNTEXT']   = 'Please state your reason for suspending this client. Leave it blank if you just feel like suspending them for the fun of it.';
+			$reason_array['ACTION']     = 'suspending';
+			$reason_array['ACTIONBUTT'] = 'Suspend Client';
+			
+			$clientview_array['BOX']     = "";
+			$clientview_array['CONTENT'] = style::replaceVar("tpl/admin/clients/reason.tpl", $reason_array);
+			return $clientview_array;
+			
+		}else{
+
+			$command = server::suspend($client['id'], $postvar['reason']);
+			
+			if($command === true){
+
+				main::redirect("?page=users&sub=search&do=".$client['id']);
+				
+			}else{
+
+				main::errors($command);
+				
+			}
+
+		}	
+	
+	}
+	
+	private function UnsuspendClient($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		$command = server::unsuspend($client['id']);
+		if($command == true){
+
+			main::redirect("?page=users&sub=search&do=".$client['id']);
+			
+		}else{
+
+			main::errors($command);
+			
+		}	
+	
+	}
+	
+	private function CancelClient($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		if(!$postvar['submitreason']){
+
+			$reason_array['WARNTEXT']   = 'Why are you cancelling this account? Leave blank if you do not wish to provide a reason or just want to see what the client does when their account gets cancelled.';
+			$reason_array['ACTION']     = 'cancelling';
+			$reason_array['ACTIONBUTT'] = 'Cancel Client';
+			
+			$clientview_array['BOX']     = "";
+			$clientview_array['CONTENT'] = style::replaceVar("tpl/admin/clients/reason.tpl", $reason_array);
+			return $clientview_array;
+			
+		}else{
+
+			$command = server::cancel($client['id'], $postvar['reason']);
+			
+			if($command == true){
+
+				//Cancelled
+				main::done();
+				
+			}else{
+
+				main::errors($command);
+				
+			}
+
+		}	
+	
+	}
+	
+	private function TerminateClient($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		if(!$postvar['submitreason']){
+
+			$client_uname = main::uname($client['id']);
+			
+			$reason_array['WARNTEXT']   = 'CAUTION: If you proceed, the account "'.$client_uname.'" will be completely and irrevocably removed from the server and THT.<br><br>Why are you terminating this account? Leave blank if you just feel like terminating them.';
+			$reason_array['ACTION']     = 'terminating';
+			$reason_array['ACTIONBUTT'] = 'Terminate Client';
+			
+			$clientview_array['BOX']     = "";
+			$clientview_array['CONTENT'] = style::replaceVar("tpl/admin/clients/reason.tpl", $reason_array);
+			return $clientview_array;
+			
+		}else{
+
+			$command = server::terminate($client['id'], $postvar['reason']);
+			
+			if($command == true){
+
+				//Terminated
+				main::done();
+				
+			}else{
+
+				main::errors($command);
+				
+			}
+
+		}	
+	
+	}
+	
+	///////////////////////////////////////////////////
+	////
+	///  Client View Friendly Functions
+	//
+	//////////////////////////
+	
+	private function ViewClient($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		$client_details_array['DATE']        = main::convertdate("n/d/Y", $client['signup']);
+		$client_details_array['EMAIL']       = $client['email'];
+		$client_details_array['UPGRADEINFO'] = "";
+		$existing_upgrade                    = $dbh->select("upgrade", array("uid", "=", $client['id']));
+		$all_packs_query                     = $dbh->select("packages", array("is_disabled", "=", "0"), array("type", "ASC"), 0, 1);
+		while($all_packs_data = $dbh->fetch_array($all_packs_query)){
+
+			$additional = type::additional($all_packs_data['id']);
+			$monthly    = $additional['monthly'];
+			$signup     = $additional['signup'];
+			
+			unset($info);
+			if($all_packs_data['type'] == "p2h"){
+
+				$info = "[Signup Posts: ".$signup.", Monthly Posts: ".$monthly."] ";
+				
+			}elseif($all_packs_data['type'] == "paid"){
+
+				$info = "[".main::money($monthly)."] ";
+				
+			}
+
+			$packages[] = array("[".$all_packs_data['type']."] ".$info.$all_packs_data['name'], $all_packs_data['id']);
+			
+			if($existing_upgrade && $existing_upgrade['newpack'] == $all_packs_data['id']){
+
+				if($all_packs_data['admin']){
+
+					$admin = " after you approve them";
+					
+				}
+
+				if($existing_upgrade['flags'] && $existing_upgrade['flags'] < 5){
+
+					$next_cycle = " next billing cycle";
+					
+				}
+
+				$client_details_array['UPGRADEINFO'] = "NOTE: This user is slated for an upgrade to \"".$all_packs_data['name']."\"".$next_cycle.$admin.".<br><br>";
+				
+			}
+
+		}
+		
+		$client_details_array['PACKAGE']     = main::dropdown("newpackage", $packages, $client['pid']);
+		$client_details_array['USER']        = $client['user'];
+		$client_details_array['DOMAIN']      = $client['domain'];
+		$client_details_array['CLIENTIP']    = $client['ip'];
+		$client_details_array['FIRSTNAME']   = $client['firstname'];
+		$client_details_array['LASTNAME']    = $client['lastname'];
+		$client_details_array['ADDRESS']     = $client['address'];
+		$client_details_array['CITY']        = $client['city'];
+		$client_details_array['STATE']       = $client['state'];
+		$client_details_array['ZIP']         = $client['zip'];
+		$client_details_array['COUNTRY']     = strtolower($client['country']);
+		$client_details_array['FULLCOUNTRY'] = main::country_code_to_country($client['country']);
+		$client_details_array['PHONE']       = $client['phone'];
+		
+		unset($where);
+		$where[] = array("uid", "=", $client['id'], "AND");
+		$where[] = array("is_paid", "=", "0");
+		
+		$invoices_query                   = $dbh->select("invoices", $where, 0, 0, 1);
+		$client_details_array['INVOICES'] = $dbh->num_rows($invoices_query);
+		
+		switch($client['status']){
+
+			default:
+				$client_details_array['STATUS'] = "Other";
+				break;
+			
+			case "1":
+				$client_details_array['STATUS'] = "Active";
+				break;
+			
+			case "2":
+				$client_details_array['STATUS'] = "Suspended";
+				break;
+			
+			case "3":
+				$client_details_array['STATUS'] = "Awaiting Validation";
+				break;
+			
+			case "4":
+				$client_details_array['STATUS'] = "Awaiting Payment";
+				break;
+			
+			case "5":
+				$client_details_array['STATUS'] = "Awaiting Email Confirmation";
+				break;
+			
+			case "9":
+				$client_details_array['STATUS'] = "Cancelled";
+				break;
+				
+		}
+
+		$class    = type::packagetype($client['pid']);
+		$packtype = $instance->packtypes[$class];
+		if(method_exists($packtype, "acpBox")){
+
+			$box                     = $packtype->acpBox();
+			$clientview_array['BOX'] = main::sub($box[0], $box[1]);
+			
+		}else{
+
+			$clientview_array['BOX'] = "";
+			
+		}
+
+		$clientview_array['CONTENT'] = style::replaceVar("tpl/admin/clients/client-details.tpl", $client_details_array);
+		return $clientview_array;
+	
+	}
+	
+	private function EmailClient($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		if($_POST){
+
+			$result = email::send($client['email'], $postvar['subject'], $postvar['content']);
+			if($result){
+
+				main::errors("Email sent!");
+				
+			}else{
+
+				main::errors("Email was not sent out!");
+				
+			}
+
+		}
+
+		$clientview_array['BOX']     = "";
+		$clientview_array['CONTENT'] = style::replaceVar("tpl/admin/clients/email-client.tpl");	
+		return $clientview_array;
+	
+	}
+	
+	private function ChangePassword($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		$change_password_array['MSG'] = "This will change the user's password in THT and the control panel.<br><br>";
+		if($_POST){
+
+			if(empty($postvar['passwd'])){
+
+				main::errors('A password was not provided.');
+				
+			}else{
+
+				$command = main::changeClientPassword($client['id'], $postvar['passwd']);
+				if($command === true){
+
+					main::errors('Password changed!');
+					
+				}else{
+
+					main::errors($command);
+					
+				}
+
+			}
+
+		}
+
+		$clientview_array['BOX']     = "";
+		$clientview_array['CONTENT'] = style::replaceVar("tpl/admin/clients/change-password.tpl", $change_password_array);	
+		return $clientview_array;
+	
+	}
+
+	private function MakeFreeClient($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		$time = time();
+		$due  = $time + 30 * 24 * 60 * 60;
+
+		if($getvar['set'] == "no"){
+		
+			$invoices_update = array("created" => $time,
+									 "due"     => $due);
+									 
+			unset($where);
+			$where[] = array("uid", "=", $client['id'], "AND");
+			$where[] = array("is_paid", "=", "0");
+			
+			$dbh->update("invoices", $invoices_update, $where);
+			$dbh->update("users", array("freeuser" => "0"), array("id", "=", $client['id']));
+			main::thtlog("Set To Non-Free", "Admin set to 'non-free user'", $client['id']);
+		
+		}else{
+		
+			$dbh->update("users", array("freeuser" => "1"), array("id", "=", $client['id']));
+			main::thtlog("Set To Free User", "Admin set to 'free user'", $client['id']);
+		
+		}
+
+		main::redirect("?page=users&sub=search&do=".$client['id']);	
+	
+	}
+	
+	private function ConfirmClientEmail($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		$dbh->update("users", array("status" => "1"), array("id", "=", $client['id']));
+		$dbh->update("users_bak", array("status" => "1"), array("uid", "=", $client['id']));
+		main::thtlog("Account Confirmed", "Account/E-mail Confirmed - By Admin", $client['id']);
+		main::redirect("?page=users&sub=search&do=".$client['id']);
+	
+	}
+	
+	private function LoginAsClient($client){
+        global $dbh, $postvar, $getvar, $instance;
+	
+		session_destroy();
+		session_start();
+		$_SESSION['clogged'] = 1;
+		$_SESSION['cuser']   = $client['id'];
+		main::redirect("../client");
+	
+	}
+
+}
+
 ?>

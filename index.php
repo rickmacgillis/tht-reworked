@@ -1,18 +1,19 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
+// The Hosting Tool Reworked
 // Index Page
-// By Jonny H
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
 
-#Include the compiler, creates everything
-define("LINK", "includes/");
-include(LINK ."compiler.php");
+define("INC", "includes");
+include(INC."/compiler.php");
 
-#Retrieve default page and redirect to it
-$page = $db->config("default");
-if($page != "") {
-        $main->redirect($page);
+$page = $dbh->config('default_page');
+if($page != ""){
+
+    main::redirect($page);
+
 }
+
 ?>

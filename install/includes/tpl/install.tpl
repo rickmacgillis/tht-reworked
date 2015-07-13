@@ -163,7 +163,7 @@ $(window).load(function () {
                     </label>
                     </td>
                     <td valign="middle" align="left">
-                    <a class="tooltip" title="Choose if you want to upgrade or install the script.<br /><b>Install:</b> This is for people who haven't installed the script prior to this. Or using different mySQL details.<br /><b>Upgrade:</b> This for people who have installed THT and are upgrading to a new version."><img src="<ICONDIR>information.png"></a>
+                    <a class="tooltip" title="Choose if you want to upgrade or install the script.<br /><b>Install:</b> This is for people who haven't installed the script prior to this. Or using different mySQL details.<br /><b>Upgrade:</b> This for people who have installed <b>THT Reworked 1.3.5</b> and are upgrading to THT Reworked 1.3.10."><img src="<ICONDIR>information.png"></a>
                     </td>
                   </tr>
                   <tr>
@@ -240,7 +240,7 @@ $(window).load(function () {
                 <td width="30%">Username:</td>
                 <td><label>
                   <input name="staffusername" type="text" id="staffusername" />
-                </label><a class="tooltip" title="This is your admin username, this is what you'll be logging into with the staff area."><img src="<ICONDIR>information.png"></a></td>
+                </label><a class="tooltip" title="This is your admin username, this is what you'll be logging into the staff area with."><img src="<ICONDIR>information.png"></a></td>
               </tr>
                  <tr>
                 <td width="30%">Password:</td>

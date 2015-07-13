@@ -1,87 +1,102 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
+// The Hosting Tool Reworked
 // Import Tool - WHM
-// By Jonny H
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
 
-//Check if called by script
-if(THT != 1){die();}
+if(THT != 1){
 
-class whmimport {
-        
-        public $name = "Web Host Manager (WHM)";
-        
-        public function import() { # Imports or displays. Whatever really..
-                global $style;
-                global $db;
-                global $main;
-                global $type;
-                
-                if(!$_POST) {
-                        $query = $db->query("SELECT * FROM `<PRE>servers` WHERE `type` = 'whm'");
-                        while($data = $db->fetch_array($query)) {
-                                $values[] = array($data['name'], $data['id']);        
-                        }
-                        $array['DROPDOWN'] = $main->dropdown("server", $values);
-                        echo $style->replaceVar("tpl/whmimport/step1.tpl", $array);        
-                }
-                elseif($_POST) {
-                        foreach($main->postvar as $key => $value) {
-                                if($value == "" && !$n) {
-                                        $main->errors("Please fill in all the fields!");
-                                        $n++;
-                                }
-                        }
-                        if(!$n) {
-                                include(LINK ."servers/whm.php");
-                                $whm = new whm;
-                                $userdata = $whm->listaccs($main->postvar['server']);
-                                foreach($userdata as $data) {
-                                        $pselect = $db->query("SELECT * FROM `<PRE>packages` WHERE `backend` = '{$data['package']}'");
-                                        $usercheck = $db->query("SELECT * FROM `<PRE>users` WHERE `user` = '{$data['user']}'");
-                                        if($db->num_rows($usercheck) == 0) {
-                                                if($db->num_rows($pselect) == 0) {
-                                                        $db->query("INSERT INTO `<PRE>packages` (name,backend,description,type,server,admin) 
-                                                                                                                                           VALUES('{$data['package']}',
-                                                                                                                                                          '{$data['package']}',
-                                                                                                                                                          'Description Here',
-                                                                                                                                                          'free',
-                                                                                                                                                          '{$main->postvar['server']}',
-                                                                                                                                                          '0')");
-                                                }
-                                                $pidquery = $db->query("SELECT * FROM `<PRE>packages` WHERE `backend` = '{$data['package']}'");
-                                                $piddata = $db->fetch_array($pidquery);
-                                                $finalpackid = $piddata['id'];
-                                                $checkquery = $db->query("SELECT * FROM `<PRE>users` WHERE `user` = '{$data['user']}'");
-                                                if($db->num_rows($checkquery) == 0) {
-                                                        $db->query("INSERT INTO `<PRE>users` (user,email,password,salt,signup,ip,status)
-                                                                                                                                         VALUES(
-                                                                                                                                                        '{$data['user']}',
-                                                                                                                                                        '{$data['email']}',
-                                                                                                                                                        '',
-                                                                                                                                                        'saltme',
-                                                                                                                                                        '{$data['start_date']}',
-                                                                                                                                                        '',
-                                                                                                                                                        '1')");
-                                                        $checkquery = $db->query("SELECT * FROM `<PRE>users` WHERE `user` = '{$data['user']}'");
-                                                        $datanewuser = $db->fetch_array($checkquery);
-                                                        $db->query("INSERT INTO `<PRE>user_packs` (userid,domain,pid,signup,status,additional) 
-                                                                                                                                         VALUES(
-                                                                                                                                                        '{$datanewuser['id']}',
-                                                                                                                                                        '{$data['domain']}',
-                                                                                                                                                        '{$finalpackid}',
-                                                                                                                                                        '{$data['start_date']}',
-                                                                                                                                                        '1',
-                                                                                                                                                        '{$additional}')");
-                                                        $n++;
-                                                }
-                                        }
-                                }
-                        }
-                        echo $n ." Accounts have been imported!";
-                }
-        }
+    die();
+
 }
+
+class whmimport{
+
+    public $name   = "Web Host Manager (WHM)";
+    public $server = "whm"; //Leave empty to always show this on the import screen
+    
+    public function import(){
+        global $dbh, $postvar, $getvar, $instance;
+        
+        if(!$_POST){
+
+            $servers_query = $dbh->select("servers", array("type", "=", "whm"), 0, 0, 1);
+            while($servers_data = $dbh->fetch_array($servers_query)){
+
+                $values[] = array($servers_data['name'], $servers_data['id']);
+            
+            }
+
+            $whm_array['DROPDOWN'] = main::dropdown("server", $values);
+            echo style::replaceVar("tpl/admin/import/whm.tpl", $whm_array);
+        
+        }elseif($_POST){
+
+            $postvar['server'] = $postvar['server']; //Hack to make sure we post the 'server' field as it doesn't post if it's empty.            
+            check::empty_fields();
+            if(main::errors()){
+
+                echo "<ERRORS>";
+                
+            }else{
+
+                include(INC."/servers/whm.php");
+                $whm          = new whm;
+                $whm_accounts = $whm->listaccs($postvar['server']);
+                foreach($whm_accounts as $whm_data){
+
+                    $packages_data = $dbh->select("packages", array("backend", "=", $whm_data['package']));
+                    $users_data    = $dbh->select("users", array("user", "=", $whm_data['user']));
+                    if(!$users_data['id']){
+
+                        if(!$packages_data['id']){
+
+                            $packages_insert = array(
+                                "name"        => $whm_data['package'],
+                                "backend"     => $whm_data['package'],
+                                "description" => "Inported from WHM: ".$whm_data['package'],
+                                "type"        => "free",
+                                "server"      => $postvar['server'],
+                                "admin"       => "1"
+                            );
+                            
+                            $dbh->insert("packages", $packages_insert);
+                        
+                        }
+
+                        $new_packages_data = $dbh->select("packages", array("backend", "=", $whm_data['package']));
+                        $salt              = crypto::salt();
+                        $newpass           = crypto::passhash(rand(), $salt);
+                        
+                        $users_insert = array(
+                            "user"     => $whm_data['user'],
+                            "email"    => $whm_data['email'],
+                            "password" => $newpass,
+                            "salt"     => $salt,
+                            "signup"   => $whm_data['start_date'],
+                            "status"   => "1",
+                            "domain"   => $whm_data['domain'],
+                            "pid"      => $new_packages_data['id']
+                        );
+                        
+                        $dbh->insert("users", $users_insert);
+                        $dbh->insert("users_bak", $users_insert);
+                        $n++;
+                    
+                    }
+
+                }
+
+                echo $n." Accounts have been imported!";
+            
+            }
+
+        }
+
+    }
+
+}
+
 ?>

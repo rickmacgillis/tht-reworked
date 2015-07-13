@@ -1,46 +1,39 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
+// The Hosting Tool Reworked
 // Cron Job
-// By Jonny H and Kevin M
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
 
-define("LINK", "./");
+define("INC", ".");
 define("CRON", 1);
 include("compiler.php");
 set_time_limit(0);
+ob_start();
 
-// Stop the output
-ob_start(); // Damn, I swear I use too much of these. Their like crack. So fuckin addictive.
 //Upgrade all the users before we start processing the type crons.
-$navens_upgrade->cron();
+upgrade::cron();
 
-$type->createAll(); // Create all the types
-$classes = $type->classes; // Because I'm a tad lazy, I set the types to a shorter variable
+$classes = $instance->packtypes;
 
-// Scans through each type
-foreach($classes as $key => $value) {
-        // Has the type got a cron?
-        if($classes[$key]->cron) {
-                // Well run it then...
-                $classes[$key]->cron();
-        }
+foreach($classes as $key => $value){
+
+    if(method_exists($classes[$key], "cron")){
+
+        $classes[$key]->cron();
+    
+    }
+
 }
 
-// 1.2 Run the Paid CronJob. 
-$invoice->cron();
+$html_buff = ob_get_clean();
+echo $html_buff;
 
-// Now we get the data
-$data = ob_get_clean(); // Get all the HTML created by the script and clean the buffer
-echo $data; // Lets just show it. Tickles my pickle. Don't have to keep checking emails.
+if($html_buff != "" && $dbh->config("emailoncron") == "1" && $dbh->config("email_for_cron")){
 
-// Now we mo truckin email it. Yeah I said it. Aren't I smart?
-if($data != "" && $db->config("emailoncron") == "1") {
-// TBD: Provide an option to have an email where the cron output is sent to
-$email->staff("Cron Job", $data); //Email all staff members the cron's output.
+	email::send($dbh->config("email_for_cron"), "Cron Job", $html_buff);
+
 }
-
-// We're done.. Should I say I.
 
 ?>

@@ -1,0 +1,31 @@
+Install:
+
+1.) Upload the files to the web accessible directory you wish to have THT Reworked 1.3.10 in.
+2.) Create a database for THT Reworked.
+3.) Go to http://YOUR SITE.com/THT DIR/install and follow the on screen instructions.
+
+Upgrade:
+
+To upgrade from THT Reworked 1.3.5:
+
+1.) Remove the existing THT files and upload the ones in this directory to it.  Retain your includes/conf.inc.php file from the old install so the new install can use it.
+2.) Go to http://YOUR SITE.com/THT DIR/install and follow the on screen instructions.
+
+
+!!!!!WARNINGS!!!!!!
+-------------------
+|                 |
+
+This release of THT Reworked revises several things.  Please keep the following in mind when upgrading.
+
+1.) Review all of your settings in "General Settings" many items were moved there and are now default.
+2.) If you do P2H hosting, you need to re-add your forums in the config.  The P2H now has it's own table.
+3.) If you modified any of your email templates, be sure to back those up.  When you're finished, you'll need to re-enter the subject and the text for them.
+4.) You and your clients must reset your password due to the heightened security used on passwords.  The has is no longer a crackable MD5 hash, but a salted hash made
+from AES-256 and Whirlpool and the password is password expanded 5,000 times!  In addition, only a portion of the hash is stored in the DB.  This makes it impractical
+for hackers to try to obtain password hashes from your DB.  Reworked Manager will be using the same hashing, so you'll only need people to reset their passwords once.
+
+
+ORIGINAL CODE:
+
+This code was heavily changed by me.  The original code can be found at http://thehostingtool.com.

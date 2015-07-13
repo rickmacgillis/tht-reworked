@@ -902,14 +902,6 @@ padding-left: 4px;
 /* THT integration - made by herolien */
 /* http://www.myheberg.com            */
 
-
-#tooltip {
-        background:#fafbfc;
-        border:1px solid #f1f4f7;
-        padding:0px;
-        color:#000;
-        font-size:11px;
-}
 .gap {
         clear:both;
         height:10px;
@@ -1122,6 +1114,35 @@ input, textarea, select {
 
 
 .info_blanc a{
-        color:grey;
+    color:grey;
 }
-.info_blanc {float:right;text-align:right;color:white; }        
+.info_blanc {
+    float:right;
+    text-align:right;
+    color:white;
+}
+
+/* Ticket Priorities */
+
+.priority_very_high{
+    font-weight: bold;
+    font-style: italic;
+    color: #660000;
+}
+
+.priority_high{
+    font-weight: bold;
+    font-style: italic;
+    color: #FF6611;
+}
+
+.priority_medium{
+    font-weight: bold;
+    font-style: italic;
+    color: #0000FF;
+}
+
+.priority_low{
+    font-weight: bold;
+    font-style: italic;
+}

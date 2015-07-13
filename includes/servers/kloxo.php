@@ -1,258 +1,356 @@
-<?php
+<?PHP
+//////////////////////////////
+// The Hosting Tool Reworked
+// Kloxo Server Class
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
+// Released under the GNU-GPL
+//////////////////////////////
 
-/**
- * TheHostingTool :: Kloxo Server Class
- * Created by Liam Demafelix (c) 2012
- * http://www.pinoytechie.net/
- * Kloxo Class Version 1.2.2 - March 13, 2012
-**/
+class kloxo{
 
-class kloxo {
-
-    public $name        = "Kloxo";
-    public $hash        = false;
-    public $ns_tmpl     = true;
-    public $has_welcome = true;
-    public $canupgrade  = true;
-
-    private $port = 7778;
-    private $sport = 7777;
-    public  $dnstemplate = "default.dnst";
-
-    # Should Kloxo send a welcome e-mail?
+    public $name = "Kloxo";
+    public $canupgrade = true;
+    public $subdomains = false; //Can you register an account with a subdomain as well as a domain?
+    
+    public $dnstemplate = "default.dnst";
+    private $diagnostics;
+    
+    // Should Kloxo send a welcome e-mail?
     private $welcome_email = true;
-
+    
     private $server;
+    
+    public function __construct($serverId = null){
+        global $dbh, $postvar, $getvar, $instance;
+		
+        if(!is_null($serverId)){
 
+            $this->server   = (int) $serverId;
+            $server_details = $this->serverDetails($this->server);
+        
+        }elseif($getvar['do']){
 
-    public function __construct($serverId = null) {
-        global $db, $main;
-            if(!is_null($serverId)) {
-                $this->server = (int)$serverId;
-                $server_details = $this->serverDetails($this->server);
-            }else{
-                $pid = $main->getvar['package']; //For the admin page.
-                if(is_numeric($pid)){
-                    $serv_query = $db->query("SELECT * FROM <PRE>packages WHERE id = '".$pid."' LIMIT 1");
-                    $serv_data = $db->fetch_array($serv_query);
-                    $this->server = $serv_data['server'];
-                    $server_details = $this->serverDetails($this->server);
-                }
-            }
+            //Suspend and stuff
+			$clients_package = main::uidtopack($getvar['do']);
+			$pid             = $clients_package['packages']['id'];
 
-            if($server_details['dnstemplate']){
-                $this->dnstemplate   = $server_details['dnstemplate'];
-            }
+            $packages_data  = $dbh->select("packages", array("id", "=", $pid), 0, "1");
+            $this->server   = $packages_data['server'];
+            $server_details = $this->serverDetails($this->server);
 
-            $this->welcome_email = $server_details['welcome'];
+        }
+
+        if($server_details['dnstemplate']){
+
+            $this->dnstemplate = $server_details['dnstemplate'];
+        
+        }
+
+        $this->welcome_email = $server_details['welcome'];
+    
     }
+	
+	public function acp_packages_form($packId = null){
+		
+		return;
+	
+	}
+	
+	public function acp_form($serverId = null){
+		global $dbh, $postvar, $getvar, $instance;
+	
+		if($serverId){
+			
+			$servers_data = $dbh->select("servers", array("id", "=", $serverId));
+			
+		}
+		
+		$yesno_opts[] = array("Yes", 1);
+		$yesno_opts[] = array("No", 0);		
+		
+		$text       = "API Port:";
+		$help       = "The port for THT to use to talk to the server on.<br><br>Standard ports:<br>7778 = HTTP / 7777 = HTTPS";
+		$input_type = "input";
+		$values     = $servers_data['apiport'];
+		$name       = "apiport";
+		$response .= main::tr($text, $help, $input_type, $values, $name);
+		
+		$text       = "Connect via HTTPS?";
+		$help       = "Should THT connect to the server via HTTPS?";
+		$input_type = "select";
+		$values     = main::dropdown("https", $yesno_opts, $servers_data['https']);
+		$response .= main::tr($text, $help, $input_type, $values);
+		
+		$text       = "Username:";
+		$help       = "Username to connect to the server";
+		$input_type = "input";
+		$values     = $servers_data['user'];
+		$name       = "user";
+		$response .= main::tr($text, $help, $input_type, $values, $name);
+					
+		$text       = "Password:";
+		$help       = "Password to connect to the server";
+		$input_type = "password";
+		$values     = $servers_data['pass'];
+		$name       = "pass";
+		$response .= main::tr($text, $help, $input_type, $values, $name);
+					
+		$text       = "DNS Template:";
+		$help       = "The DNS template for creating new domains with - Check out the documentation for your control panel for more information.";
+		$input_type = "input";
+		$values     = ($servers_data['dnstemplate'] == "" ? $this->dnstemplate : $servers_data['dnstemplate']);
+		$name       = "nstmp";
+		$response .= main::tr($text, $help, $input_type, $values, $name);
+					
+		$text       = "Backend Welcome Email Too?";
+		$help       = "Should the server's welcome email be sent out in addition to THT's welcome email?";
+		$input_type = "select";
+		$values     = main::dropdown("welcome", $yesno_opts, $servers_data['welcome']);
+		$response .= main::tr($text, $help, $input_type, $values);	
+		
+		return $response;
+		
+	}	
 
-    private function serverDetails($server) {
-        global $db;
-        global $main;
-        $query = $db->query("SELECT * FROM `<PRE>servers` WHERE `id` = '{$db->strip($server)}'");
-        if($db->num_rows($query) == 0) {
-            $array['Error'] = "That server doesn't exist!";
-            $array['Server ID'] = $id;
-            $main->error($array);
+    private function serverDetails($server){
+        global $dbh, $postvar, $getvar, $instance;
+		
+        $servers_data = $dbh->select("servers", array("id", "=", $server));
+        if(!$servers_data['id']){
+
+            $error_array['Error']     = "That server doesn't exist!";
+            $error_array['Server ID'] = $id;
+            main::error($error_array);
             return;
+        
+        }else{
+
+            return $servers_data;
+        
         }
-        else {
-            return $db->fetch_array($query);
-        }
+
     }
 
-    private function remote($action, $test = 0) {
-    global $db;
-
-        $data = $this->serverDetails($this->server);
-
-        $ip = gethostbyname($data['host']);
-
-        // Connect
-        /** As per THT team recommendation (by Kevin), this plugin now uses cURL to connect **/
-        $ch = curl_init();
+    private function remote($action, $test = 0){
+        global $dbh, $postvar, $getvar, $instance;
+        
+        $server_details = $this->serverDetails($this->server);
+        
+        $ip = gethostbyname($server_details['host']);        
+        $ch      = curl_init();
         $timeout = 5;
-                if($db->config("whm-ssl") == 1) {
-                        $serverstuff = "https://" . $data['host'] . ":" . $this->sport . "/webcommand.php?login-class=auxiliary&login-name=" . $data['user'] . "&login-password=" . $data['accesshash'] . "&" . $action;
-                        curl_setopt($ch, CURLOPT_URL, $serverstuff);
-                        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                }
-                else {
-                        $serverstuff = "http://" . $data['host'] . ":" . $this->port . "/webcommand.php?login-class=auxiliary&login-name=" . $data['user'] . "&login-password=" . $data['accesshash'] . "&" . $action;
-                        curl_setopt($ch, CURLOPT_URL, $serverstuff);
-                }
+        
+        if($server_details['https']){
+
+            //Usually 7777
+            if($server_details['apiport'] != 443){
+
+                $port = $server_details['apiport'];
+                
+            }
+
+            $serverstuff = "https://".$server_details['host'].":".$port."/webcommand.php?login-class=auxiliary&login-name=".$server_details['user']."&login-password=".$server_details['accesshash']."&".$action;
+            curl_setopt($ch, CURLOPT_URL, $serverstuff);
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            
+        }else{
+
+            //Usually 7778
+            if($server_details['apiport'] != 80){
+
+                $port = $server_details['apiport'];
+                
+            }
+
+            $serverstuff = "http://".$server_details['host'].":".$port."/webcommand.php?login-class=auxiliary&login-name=".$server_details['user']."&login-password=".$server_details['accesshash']."&".$action;
+            curl_setopt($ch, CURLOPT_URL, $serverstuff);
+            
+        }
+
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-        $data = curl_exec($ch);
+        $curl_data = curl_exec($ch);
         curl_close($ch);
-
+        
         // Parse Data
-        $data = htmlentities($data);
-
+        $curl_data = htmlentities($curl_data);
+        
         // End
-
+        
         if(!$test){
-            if(strpos($data, "success") != false) {
+
+            if(strpos($curl_data, "success") != false){
+
                 return true;
-            }
-            else {
+            
+            }else{
+
                 return false;
+            
             }
+
         }else{
-            if($data != "_error_login_error") {
+
+            if($curl_data != "_error_login_error"){
+
                 return true;
-            }
-            else {
+            
+            }else{
+
+                $this->diagnostics["SEND"] = $serverstuff;
+                $this->diagnostics["RECV"] = $curl_data;
                 return false;
+            
             }
+
         }
 
     }
 
-     public function GenUsername() {
-            $t = rand(5,8);
-            for ($digit = 0; $digit < $t; $digit++) {
-                $r = rand(0,1);
-                $c = ($r==0)? rand(65,90) : rand(97,122);
-                $user .= chr($c);
-            }
-            return $user;
+    public function signup($server, $reseller, $user, $email, $pass, $domain, $server_pack, $extra = array(), $domsub){
+        global $dbh, $postvar, $getvar, $instance;
+        
+        $this->server = $server;
+        $server_details = $this->serverDetails($this->server);
+        $ip             = gethostbyname($server_details['host']);
+        
+        $package = str_replace(" ", "", $server_pack);
+        
+        if($this->welcome_email){
+
+            $send_email_kloxo = "on";
+        
+        }else{
+
+            $send_email_kloxo = "off";
+        
+        }
+
+        $string = "action=add&class=client&name=".$user.""."&v-password=".$pass.""."&v-domain_name=".$domain.""."&v-dnstemplate_name=".$this->dnstemplate.""."&v-plan_name=".$package.""."&v-send_welcome_f=".$send_email_kloxo."&v-contactemail=".$email."";
+        // Reseller or Not?
+        if($reseller){
+
+            $string .= "&v-type=reseller";
+        
+        }else{
+
+            $string .= "&v-type=customer";
+        
+        }
+
+        //echo $action."<br />". $reseller;
+        $command = $this->remote($string);
+        if($command == true){
+
+            return true;
+            
+        }else{
+
+            $order_error = "ORDER ERROR: There was an error on the order form.  Below are the details to help you diagnose this.
+
+                                        Data sent to the server:
+                                        Sent to: ".$this->diagnostics["SENT"]."
+
+                                        Response from server:
+
+                                        Data:
+                                        ".$this->diagnostics["RECV"];
+            
+            main::thtlog("Kloxo Error", nl2br(htmlspecialchars($order_error, ENT_QUOTES)));
+            
+            return "An error has occurred. Please inform your system administrator.";
+            
+        }
+
+    }
+    
+    public function suspend($user, $server, $reason = false){
+
+        $this->server = $server;
+        $action       = "action=update&subaction=disable&class=client&name=".strtolower($user);
+        return $this->remote($action);
+    
     }
 
-    public function GenPassword() {
-            for ($digit = 0; $digit < 5; $digit++) {
-                $r = rand(0,1);
-                $c = ($r==0)? rand(65,90) : rand(97,122);
-                $passwd .= chr($c);
-            }
-            return $passwd;
+    public function unsuspend($user, $server){
+
+        $this->server = $server;
+        $action       = "action=update&subaction=enable&class=client&name=".strtolower($user);
+        return $this->remote($action);
+    
     }
 
-    public function signup($server, $reseller, $user = '', $email = '', $pass = '') {
-                global $main;
-                global $db;
+    public function terminate($user, $server){
 
+        $this->server = $server;
+        $action       = "action=delete&class=client&name=".strtolower($user);
+        return $this->remote($action);
+    
+    }
 
-                if ($user == '') { $user = $main->getvar['username']; }
-                if ($email == '') { $email = $main->getvar['email']; }
-                if ($pass == '') { $pass = $main->getvar['password']; }
-                $this->server = $server;
-                $data = $this->serverDetails($this->server);
-                $ip = gethostbyname($data['host']);
+    public function testConnection($serverId = null){
 
-                /**
-                 * As of Version 1.2.2 : Perform Validation Checks on Variables
-                **/
-                $user = trim(stripslashes($main->getvar['username']));
-                $email = trim(stripslashes($main->getvar['email']));
-                $pass = trim(stripslashes($main->getvar['password']));
-                $package = $main->getvar['fplan'];
-                $package = str_replace(" ", "", $package);
+        if(!is_null($serverId)){
 
-                /**
-                 * As of Version 1.2.2 : Kloxo Welcome E-Mail Configuration
-                **/
-                if($this->welcome_email) {
-                    $send_email_kloxo = "on";
-                } else {
-                    $send_email_kloxo = "off";
-                }
-
-                $string =   "action=add&class=client&name=". $user . "".
-                                        "&v-password=". $pass ."".
-                                        "&v-domain_name=". $main->getvar['fdom'] ."".
-                                        "&v-dnstemplate_name=" . $this->dnstemplate ."".
-                                        "&v-plan_name=". $package ."".
-                                        "&v-send_welcome_f=" . $send_email_kloxo .
-                                        "&v-contactemail=".$email."";
-                // Reseller or Not?
-                if($reseller) {
-                        $string .= "&v-type=reseller";
-                }
-                else {
-                        $string .= "&v-type=customer";
-                }
-                //echo $action."<br />". $reseller;
-                $command = $this->remote($string);
-                if($command == true) {
-                        return true;
-                }
-                else {
-                      echo "An error has occurred. Please inform your system administrator.";
-                       return false;
-                    }
-
+            $this->server = (int) $serverId;
+        
         }
 
-        /**
-         * Thanks to Days and Kevin for fixing the suspend, unsuspend and terminate functions
-        **/
+        $command = $this->remote("", 1);
+        if($command == true){
 
-        public function suspend($user, $server, $reason = false) {
-                $this->server = $server;
-                $action = "action=update&subaction=disable&class=client&name=" . strtolower($user);
-                return $this->remote($action);
+            return true;
+        
+        }else{
+
+            return "Invalid login.";
+        
         }
 
-        public function unsuspend($user, $server) {
-                $this->server = $server;
-                $action = "action=update&subaction=enable&class=client&name=" . strtolower($user);
-                return $this->remote($action);
+    }
+	
+    public function changePwd($acct, $newpwd, $server){
+
+        $this->server = $server;
+        $string       = "action=update&subaction=password&class=client&name=".$acct."&v-password=".$newpwd;
+        
+        $command = $this->remote($string);
+        if($command == true){
+
+            return true;
+        
+        }else{
+
+            echo "Password could not be changed.";
+            return false;
+        
         }
 
-        public function terminate($user, $server) {
-                $this->server = $server;
-                $action = "action=delete&class=client&name=" . strtolower($user);
-                return $this->remote($action);
+    }
+
+    public function do_upgrade($server, $pkg, $user){
+        global $dbh, $postvar, $getvar, $instance;
+        
+        $this->server = $server;
+        $action       = "action=update&subaction=change_plan&class=client&name=".$user."&v-resourceplan_name=".$pkg;
+        
+        $command = $this->remote($action);
+        
+        if($command == true){
+
+            return true;
+        
+        }else{
+
+            echo "Could not perform upgrade.  Please report this to the administrator.";
+            return false;
+        
         }
 
-        public function changePwd($acct, $newpwd, $server)
-        {
-                $this->server = $server;
-                $string =   "action=update&subaction=password&class=client&name=".$acct."&v-password=".$newpwd;
+    }
 
-                $command = $this->remote($string);
-                if($command == true) {
-                        return true;
-                }
-                else {
-                      echo "Password could not be changed.";
-                       return false;
-                }
-
-        }
-
-        public function testConnection($serverId = null) {
-                if(!is_null($serverId)) {
-                        $this->server = (int)$serverId;
-                }
-                $command = $this->remote("", 1);
-                if($command == true) {
-                    return true;
-                }
-                else {
-                    return "Invalid login.";
-                }
-        }
-
-        public function upgrade($server, $pkg, $user){
-                global $main;
-                global $db;
-
-                $this->server = $server;
-                $action = "action=update&subaction=change_plan&class=client&name=".$user."&v-resourceplan_name=".$pkg;
-
-                $command = $this->remote($action);
-
-                if($command == true) {
-                    return true;
-                }
-                else {
-                    echo "Could not perform upgrade.  Please report this to the administrator.";
-                    return false;
-                }
-        }
 }
+
+?>

@@ -1,29 +1,38 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
-// Admin Area - Home
-// By Jonny H
+// The Hosting Tool Reworked
+// Admin Area - Types Pages
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
 
 //Check if called by script
-if(THT != 1){die();}
+if(THT != 1){
 
-class page {
-	
-	public $navtitle;
-	public $navlist = array();
-	
-	public function content() { # Displays the page 
-		global $style;
-		global $db;
-		global $main;
-		global $type;
-		if(!$main->getvar['type'] || !$main->getvar['sub']) {
-			echo "Not all variables set!";	
-		}
-		else {
-			$type->classes[$main->getvar['type']]->clientPage();
-		}
-	}
+    die();
+
 }
+
+class page{
+
+    public $navtitle;
+    public $navlist = array();
+    
+    public function content(){
+        global $dbh, $postvar, $getvar, $instance;
+		
+        if(!$getvar['type'] || !$getvar['sub']){
+
+            echo "This page cannot be displayed.";
+        
+        }else{
+
+            $instance->packtypes[$getvar['type']]->clientPage();
+        
+        }
+
+    }
+
+}
+
+?>

@@ -1,134 +1,176 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
+// The Hosting Tool Reworked
 // Admin Area - Logs
-// By KuJoe
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
 
 //Check if called by script
-if(THT != 1){die();}
+if(THT != 1){
+
+    die();
+
+}
 
 define("PAGE", "Logs");
 
-class page {
+class page{
+
+    public function content(){
+        global $dbh, $postvar, $getvar, $instance;
         
-        public function content() { # Displays the page 
-                global $style;
-                global $db;
-                global $main;
+        if(is_numeric($getvar['dellogid'])){
 
-                if(is_numeric($main->getvar['dellogid'])){
-                echo "<font color = '#FF0000'>Log entry deleted!</font>";
-                $db->query("DELETE FROM `<PRE>logs` WHERE `id` = '".$main->getvar['dellogid']."'");
-                }
-                
-                if(is_numeric($main->getvar['removeall'])){
-                if($main->getvar['confirm'] != '1'){
-                echo "<font color = '#FF0000'>Are you sure you wish to remove ALL log entries? &nbsp;&nbsp;<a href = '?page=logs&removeall=".$main->getvar['removeall']."&confirm=1'>Yes</a>&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;<a href = '?page=logs'>No</a></font>";
-                }else{
-                echo "<font color = '#FF0000'>All log entries have been removed!</font>";
-                $db->query("DELETE FROM `<PRE>logs`");
-                }
-                }
-                
-                if(is_numeric($main->getvar['logid'])){
-                $query = $db->query("SELECT * FROM `<PRE>logs` WHERE `id` = '".$main->getvar['logid']."'");
-                $loginfo = $db->fetch_array($query);
-
-                $array['MESSAGE'] = $loginfo['message'];
-                echo $style->replaceVar("tpl/adminlogview.tpl", $array);
-                }else{
-                echo $style->replaceVar("tpl/adminlogstop.tpl", $array);
-                $l = $main->getvar['l'];
-                $p = $main->getvar['p'];
-                if (!$main->postvar['show'] && !$main->getvar['show']) {
-                        $show = "all";
-                }
-                if (!$main->postvar['show']) {
-                        $show = $main->getvar['show'];
-                }
-                else {
-                        $show = $main->postvar['show'];
-                        $p = 0;
-                }
-                if (!($l)) {
-                        $l = 10;
-                }
-                if (!($p)) {
-                        $p = 0;
-                }
-                if ($show != all) {
-                if($show == "PayPal"){
-                 $paypal_wildcard = "%";  //I have no idea why the logs search the message instead of putting another entry in the DB, but this is the quick way to patch
-                                          //PayPal into the search system without having to rewrite the logging system.
-                }
-                        $query = $db->query("SELECT * FROM `<PRE>logs` WHERE `message` LIKE '".$paypal_wildcard."$show%'");
-                }
-                else {
-                        $query = $db->query("SELECT * FROM `<PRE>logs`");
-                }
-                $pages = intval($db->num_rows($query)/$l);
-                                if ($db->num_rows($query)%$l) {
-                                        $pages++;
-                                }
-                                $current = ($p/$l) + 1;
-                                if (($pages < 1) || ($pages == 0)) {
-                                        $total = 1;
-                                }
-                                else {
-                                        $total = $pages;
-                                }
-                                $first = $p + 1;
-                                if (!((($p + $l) / $l) >= $pages) && $pages != 1) {
-                                        $last = $p + $l;
-                                }
-                                else{
-                                        $last = $db->num_rows($query);
-                                }
-                                if ($db->num_rows($query) == 0) {
-                                        echo "No logs found.";
-                                }
-                                else {
-                                        if ($show != all) {
-                                                $query2 = $db->query("SELECT * FROM `<PRE>logs` WHERE `message` LIKE '".$paypal_wildcard."$show%' ORDER BY `id` DESC LIMIT $p, $l");
-                                        }
-                                        else {
-                                                $query2 = $db->query("SELECT * FROM `<PRE>logs` ORDER BY `id` DESC LIMIT $p, $l");
-                                        }
-                                        while($data = $db->fetch_array($query2)) {
-                                                $message_data = explode("<", substr($data['message'], 0, 100));
-                                                $array['USER'] = $data['loguser'];
-                                                $array['DATE'] = $main->convertdate("n/d/Y", $data['logtime']);
-                                                $array['TIME'] = $main->convertdate("g:i A", $data['logtime']);
-                                                $array['MESSAGE'] = $message_data[0];
-                                                $array['LOGID'] = $data['id'];
-                                        echo $style->replaceVar("tpl/adminlogs.tpl", $array);
-                                        }
-                                }
-                echo "</table></div>";
-                echo "<center>";
-                if ($p != 0) {
-                        $back_page = $p - $l;
-                        echo("<a href=\"$PHP_SELF?page=logs&show=$show&p=$back_page&l=$l\">BACK</a>    \n");
-                }
-
-                for ($i=1; $i <= $pages; $i++) {
-                        $ppage = $l*($i - 1);
-                        if ($ppage == $p){
-                                echo("<b>$i</b>\n");
-                        }
-                        else{
-                                echo("<a href=\"$PHP_SELF?page=logs&show=$show&p=$ppage&l=$l\">$i</a> \n");
-                        }
-                }
-
-                if (!((($p+$l) / $l) >= $pages) && $pages != 1) {
-                        $next_page = $p + $l;
-                        echo("    <a href=\"$PHP_SELF?page=logs&show=$show&p=$next_page&l=$l\">NEXT</a>");
-                }
-                echo "</center>";
-                }
+            $dbh->delete("logs", array("id", "=", $getvar['dellogid']), "1");
+            main::errors("Log entry deleted.");
+        
         }
+
+        if(is_numeric($getvar['removeall'])){
+
+            if($getvar['confirm'] != '1'){
+
+                main::errors("Are you sure you wish to remove ALL log entries?   <a href = '?page=logs&removeall=".$getvar['removeall']."&confirm=1'>Yes</a>    |    <a href = '?page=logs'>No</a>");
+            
+            }else{
+
+                $dbh->delete("logs", 0, 0, 1);
+				main::thtlog("Logs Cleared", "All Logs were removed.", $_SESSION['user'], "", "staff");
+                main::redirect("?page=logs");
+            
+            }
+
+        }
+
+        if(is_numeric($getvar['logid'])){
+
+            $loginfo = $dbh->select("logs", array("id", "=", $getvar['logid']));
+            
+            $admin_log_view_array['MESSAGE'] = $loginfo['message'];
+            echo style::replaceVar("tpl/admin/logs/admin-log-view.tpl", $admin_log_view_array);
+            
+        }else{
+
+            $per_page = $getvar['limit'];
+            $start    = $getvar['start'];
+            
+            if(!$postvar['show']){
+
+                $show = $getvar['show'];
+                
+            }else{
+
+                $show  = $postvar['show'];
+                $start = 0;
+                
+            }
+
+            if(!$show){
+
+                $show = "all";
+                
+            }
+
+            if(!$per_page){
+
+                $per_page = 10;
+                
+            }
+
+            if(!$start){
+
+                $start = 0;
+                
+            }
+
+            if($show != "all"){
+
+                $logs_query = $dbh->select("logs", array("logtype", "=", $show), array("logtime", "DESC"), $start.", ".$per_page, 1);
+                
+            }else{
+
+                $logs_query = $dbh->select("logs", 0, array("logtime", "DESC"), $start.", ".$per_page, 1);
+                
+            }
+
+			$all_logs_query = $dbh->select("logs");
+            $num_logs = $dbh->num_rows($all_logs_query);
+            $pages    = ceil($num_logs / $per_page);
+            
+            if($num_logs == 0){
+
+                $admin_logs_list_array['LOGS']   = "";
+                $admin_logs_list_array['PAGING'] = "";
+                main::errors("No logs found.");
+                
+            }else{
+
+                while($logs_data = $dbh->fetch_array($logs_query)){
+
+                    $message_data     = explode("<", substr($logs_data['message'], 0, 100));
+                    $admin_log_item_array['USER']    = $logs_data['loguser'];
+                    $admin_log_item_array['DATE']    = main::convertdate("n/d/Y", $logs_data['logtime']);
+                    $admin_log_item_array['TIME']    = main::convertdate("g:i A", $logs_data['logtime']);
+                    $admin_log_item_array['MESSAGE'] = $message_data[0];
+                    $admin_log_item_array['LOGID']   = $logs_data['id'];
+                    $admin_logs_list_array['LOGS'] .= style::replaceVar("tpl/admin/logs/admin-log-item.tpl", $admin_log_item_array);
+                    
+                }
+
+            }
+
+            if($start != 0){
+
+                $back_page               = $start - $per_page;
+                $admin_logs_list_array['PAGING'] = '<a href="?page=logs&show='.$show.'&start='.$back_page.'&limit='.$per_page.'">BACK</a>&nbsp;';
+                
+            }
+
+            for($i = 1; $i <= $pages; $i++){
+
+                $start_link = $per_page * ($i - 1);
+                if($start_link == $start){
+
+                    $admin_logs_list_array['PAGING'] .= '&nbsp;<b>'.$i.'</b>&nbsp;';
+                    
+                }else{
+
+                    $admin_logs_list_array['PAGING'] .= '&nbsp;<a href="?page=logs&show='.$show.'&start='.$start_link.'&limit='.$per_page.'">'.$i.'</a>&nbsp;';
+                    
+                }
+
+            }
+
+            if(($start + $per_page) / $per_page < $pages && $pages != 1){
+
+                $next_page = $start + $per_page;
+                $admin_logs_list_array['PAGING'] .= '&nbsp;<a href="?page=logs&show='.$show.'&start='.$next_page.'&limit='.$per_page.'">NEXT</a>';
+                
+            }
+			
+			$shown = array();
+			$log_type_values[] = array("Show All", "all");
+			
+			$logs_query = $dbh->select("logs", 0, array("logtype", "ASC"), 0, 1);
+			while($logs_data = $dbh->fetch_array($logs_query)){
+			
+				if(!in_array($logs_data['logtype'], $shown)){
+				
+					$log_type_values[] = array($logs_data['logtype'], $logs_data['logtype']);
+					$shown[] = $logs_data['logtype'];
+					
+				}
+			
+			}
+			
+			$admin_logs_list_array['SHOW_TYPE'] = main::dropdown("show", $log_type_values);
+            echo style::replaceVar("tpl/admin/logs/admin-logs-list.tpl", $admin_logs_list_array);
+            
+        }
+
+    }
+
 }
+
 ?>

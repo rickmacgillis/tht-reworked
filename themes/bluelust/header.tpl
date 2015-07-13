@@ -74,11 +74,7 @@ document.write(messageDate);
 </div>
 <div class="menu">
 <ul>
-  <li><a href="../">Home</a></li>
-  <li><a href="<URL>forums" target = "_blank">Forums</a></li>
-  <li><a href="<URL>support">Knowledgebase</a></li>
-  <li><a href="<URL>client">Members</a></li>
-  <li><a href="<URL>client/index.php?page=invoices">Billing</a></li>
+  <MENU>
 </ul>
 </div>
 

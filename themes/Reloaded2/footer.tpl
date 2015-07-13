@@ -17,7 +17,7 @@
         </div>
         </div>
     </div>
-<font face = "Verdana" size = "2"><center>&copy; 2011 <NAME><br>
+<font face = "Verdana" size = "2"><center>&copy; 2013 <NAME><br>
 THT reworked by <a href = "http://thelifemaster.com" target = "_blank">The Life Master</a></center></font>
 </body>
 </html>

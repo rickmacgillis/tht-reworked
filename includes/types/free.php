@@ -1,23 +1,22 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
-// Free - THT Type
-// By Jonny H
+// The Hosting Tool Reworked
+// Free Hosting Type
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
 
-//Check if called by script
-if(THT != 1){die();}
+if(THT != 1){
 
-// Create the class
-class free {
-	
-	public $signup = false; // Does this type have a signup function?
-    public $name = "Free"; // Human readable name of the package.
-    public $cron = false; // No cron.
-	
-	// LOL is there any functions to this? I don't think so. Oh Im so pro..
+    die();
 
 }
-//End Type
+
+class free{
+
+    public $signup = false; // Does this type have a signup function?
+    public $name = "Free";
+    
+}
+
 ?>

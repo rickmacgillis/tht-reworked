@@ -8,9 +8,13 @@
 </head>
 <body>
     <div id="wrapper">
-    	<div class="logo"></div>
-        <div id="nav">
-        	<MENU>
-        </div>
+        <div class="logo"></div>
+            <div id="nav">
+                <div id='tht_navigation'>
+                    <ul>
+                        <MENU>
+                    </ul>
+                </div>
+            </div>
         <div class="gap"></div><div class="gap"></div>
 

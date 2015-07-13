@@ -1,52 +1,67 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
+// The Hosting Tool Reworked
 // Client Area - View Package
-// By Jonny H
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
 
 //Check if called by script
-if(THT != 1){die();}
+if(THT != 1){
 
-class page {
-	
-	public function content() { # Displays the page 
-		global $style, $db, $main, $server;
-		$data = $db->client($_SESSION['cuser']);
-		$query2 = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `userid` = '{$db->strip($data['id'])}'");
-		$data3 = $db->fetch_array($query2);
-		$query = $db->query("SELECT * FROM `<PRE>packages` WHERE `id` = '{$db->strip($data3['pid'])}'");
-		$data2 = $db->fetch_array($query);		
-		$query3 = $db->query("SELECT * FROM `<PRE>users` WHERE `id` = '{$db->strip($data['id'])}'");
-		$data4 = $db->fetch_array($query3);
-		$array['USER'] = $data4['user'];
-		$array['SIGNUP'] = $main->convertdate("n/d/Y", $data3['signup']);
-		$array['DOMAIN'] = $data3['domain'];
-		$array['PACKAGE'] = $data2['name']." <a href = '?page=upgrade'>Change</a>";
-		$array['DESCRIPTION'] = $data2['description'];
-		
-		if($_POST) {
-				if(md5(md5($main->postvar['currentpass']) . md5($data['salt'])) == $data['password']) {
-					if($main->postvar['newpass'] == $main->postvar['cpass']) {
-						$cmd = $main->changeClientPassword($data3['id'], $main->postvar['cpass']);
-						if($cmd === true) {
-							$main->errors("Details updated!");
-						}
-						else {
-							$main->errors((string)$cmd);
-						}
-					}
-					else {
-						$main->errors("Your passwords don't match!");		
-					}
-				}
-				else {
-					$main->errors("Your current password wasn't correct!");	
-				}
-		}
-		
-		echo $style->replaceVar("tpl/cview.tpl", $array);
-	}
+    die();
+
 }
+
+class page{
+
+    public function content(){
+        global $dbh, $postvar, $getvar, $instance;
+        
+        $client_data     = $dbh->client($_SESSION['cuser']);
+        $packages_data   = $dbh->select("packages", array("id", "=", $client_data['pid']));
+        
+        $view_package_array['USER']        = $client_data['user'];
+        $view_package_array['SIGNUP']      = main::convertdate("n/d/Y", $client_data['signup']);
+        $view_package_array['DOMAIN']      = $client_data['domain'];
+        $view_package_array['PACKAGE']     = $packages_data['name']." <a href = '?page=upgrade'>Change</a>";
+        $view_package_array['DESCRIPTION'] = $packages_data['description'];
+        
+        if($_POST){
+
+            if(crypto::passhash($postvar['currentpass'], $client_data['salt']) == $client_data['password']){
+
+                if($postvar['newpass'] == $postvar['cpass']){
+
+                    $cmd = main::changeClientPassword($client_data['id'], $postvar['newpass']);
+                    if($cmd === true){
+
+                        main::errors("Details updated!");
+                    
+                    }else{
+
+                        main::errors((string) $cmd);
+                    
+                    }
+
+                }else{
+
+                    main::errors("Your passwords don't match!");
+                
+                }
+
+            }else{
+
+                main::errors("Your current password wasn't correct!");
+            
+            }
+
+        }
+
+        echo style::replaceVar("tpl/client/view-package.tpl", $view_package_array);
+    
+    }
+
+}
+
 ?>

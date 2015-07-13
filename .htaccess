@@ -1,0 +1,10 @@
+php_flag display_errors off
+php_flag html_errors off
+php_flag register_globals off
+
+Options -Indexes
+
+<Files ~ "\.(tpl)$">
+order deny,allow
+deny from all
+</Files>

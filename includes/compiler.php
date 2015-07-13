@@ -1,232 +1,274 @@
-<?php
+<?PHP
 //////////////////////////////
-// The Hosting Tool
+// The Hosting Tool Reworked
 // Compiler
-// By Jonny H
+// By Reworked Scripts (Original Script by http://thehostingtool.com)
 // Released under the GNU-GPL
 //////////////////////////////
-error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
 
-// Define the main THT
 define("THT", 1);
+define("LANG", "en_US");
 
 date_default_timezone_set("GMT");
 
-$path = dirname($_SERVER['PHP_SELF']);
-$position = strrpos($path,'/') + 1;
-define("FOLDER", substr($path,$position)); # Add current folder name to global
+$path     = dirname($_SERVER['PHP_SELF']);
+$position = strrpos($path, '/') + 1;
+define("FOLDER", substr($path, $position)); // Add current folder name to global
 
 if(!($_GET['page'] == 'invoices' && FOLDER == "client")){
-//As this prevents PayPal from using the site, disable this script when PayPal might be trying to get through.
 
-// Helps prevent against CSRF attacks and PayPal execution.
-require_once("csrf-magic.php");
+    //As this prevents PayPal from using the site, disable this script when PayPal might be trying to get through.
+    
+    // Helps prevent against CSRF attacks and PayPal execution.
+    require_once("csrf-magic.php");
+
 }
 
 // We don't want this to be called directly.
 $compile = explode("/", $_SERVER["SCRIPT_FILENAME"]);
-if($compile[count($compile)-1] == "compiler.php") {
-        die("Please do not call \"compiler.php\" directly.");
+if($compile[count($compile) - 1] == "compiler.php"){
+
+    die("Please do not call \"compiler.php\" directly.");
+
 }
 
-#Page generated
+//Page generated
 $starttime = explode(' ', microtime());
 $starttime = $starttime[1] + $starttime[0];
 
-#Start us up
-if(CRON != 1) {
-        session_start();
-        header("Cache-control: private");
+//Start us up
+if(CRON != 1){
+
+    session_start();
+    header("Cache-control: private");
+
 }
 
-#Stop the output
+//Stop the output
 ob_start();
 
-#Check for Dependencies
-$d = checkForDependencies();
-if($d !== true) {
-        die((string)$d);
+//Check for Dependencies
+$deps = checkForDependencies();
+if($deps !== true){
+
+    die((string) $deps);
+
 }
 
-#Check PHP Version
+//Check PHP Version
 $version = explode(".", phpversion());
 
 //Grab DB First
-require LINK."/class_db.php"; # Get the file
-if(file_exists(LINK."/conf.inc.php")) {
-        include LINK."/conf.inc.php"; # Get the config
-        define("NOCONFIG", false);
-}
-else {
-        define("NOCONFIG", true);
-}
-if($sql['install']) {
-        define("INSTALL", 1);
-        $db = new db; # Create the class
-        global $db; # Globalise it
+require INC."/instances/class_db.php";
+if(file_exists(INC."/conf.inc.php")){
+
+    include INC."/conf.inc.php";
+
 }
 
-$folder = LINK;
-if ($handle = opendir($folder)) { # Open the folder
-        while (false !== ($file = readdir($handle))) { # Read the files
-                if($file != "." && $file != "..") { # Check aren't these names
-                        $base = explode(".", $file); # Explode the file name, for checking
-                        if($base[1] == "php") { # Is it a php?
-                                $base2 = explode("_", $base[0]);
-                                if($base2[0] == "class" && $base2[1] != "db") {
-                                        require $folder."/".$file; # Get the file
-                                        ${$base2[1]} = new $base2[1]; # Create the class
-                                        global ${$base2[1]}; # Globalise it
-                                }
-                        }
+//Is THT installed?
+if($sql['install']){
+
+    define("INSTALL", 1);
+
+}
+
+$dbh = new dbh;
+global $dbh;
+
+include(INC."/instances/class_instance.php");
+$instance = new instance;
+global $instance;
+
+$folder = INC."/classes";
+if($handle = opendir($folder)){
+
+    while(false !== ($file = readdir($handle))){
+	
+        if($file != "." && $file != ".."){
+		
+            $base = explode(".", $file); 
+            if($base[1] == "php"){
+			
+                $base2 = explode("_", $base[0]);
+                if($base2[0] == "class"){
+
+                    require $folder."/".$file;
+					new $base2[1]; //Even though these aren't instances being used right now, they do store instance data in class instance.
+					
                 }
-        }
-}
-closedir($handle); #Close the folder
 
+            }
+
+        }
+
+    }
+
+}
+
+closedir($handle); 
 
 //Define the Admin directory
 if(!defined("ADMINDIR")){
-$admin_dir = find_admin_dir("../");
-define("ADMINDIR", $admin_dir);
-if(INSTALL == 1) {
-$db->query("UPDATE <PRE>navbar SET link = '".ADMINDIR."' WHERE visual = 'Admin Area' LIMIT 1"); //Update the NavBar admin directory
-}
+
+    $admin_dir = find_admin_dir("../");
+    define("ADMINDIR", $admin_dir);
+    
 }
 
-if(INSTALL == 1) {
-////////////////////
-//AKISMET
+if(INSTALL == 1){
 
-//Akismet requires a special initialization.  Putting it here will aid in future use of Akismet.  (Ex. Contact forms and the like.)
+	$session_timeout = $dbh->config("session_timeout") * 60; //Make minutes into seconds.
+	if($session_timeout){
 
-$akismetkey = $db->config('akismetkey');
-if($db->config('useakismet') == "1" && $akismetkey){
-//Let's keep the URL consistent.
-if($_SERVER['SERVER_PORT'] == "443"){
- $akismeturl = "https://".$_SERVER['HTTP_HOST'];
-}else{
- $akismeturl = "http://".$_SERVER['HTTP_HOST'];
+		if(time() - $session_timeout > $_SESSION['time'] && $_SESSION['time']){
+
+			session_destroy();
+			main::redirect("./");
+			
+		}
+
+		//Keep it alive when there's activity.
+		$_SESSION['time'] = time();
+		
+	}
+    
+    define("THEME", $dbh->config("theme")); // Set the default theme
+    // Sets the URL THT is located at
+    if($_SERVER["HTTPS"]){
+
+        // HTTPS support
+        define("URL", str_replace("http://", "https://", $dbh->config("url")));
+        
+    }else{
+
+        define("URL", $dbh->config("url"));
+        
+    }
+
+    define("NAME", $dbh->config("name")); // Sets the name of the website
+    
 }
 
-include(LINK."Akismet/Akismet.php");
-$akismet = new Akismet($akismeturl, $akismetkey);
-global $akismet;
+// Converts the $_POST global array into $postvar - DB Friendly.
+$postvar = array();
+if(isset($_POST)){
+
+    foreach($_POST as $key => $value){
+
+        $postvar[$key] = $dbh->strip($value);
+        
+    }
+
 }
 
-//END AKISMET
-///////////////////
+global $postvar;
 
-        define("THEME", $db->config("theme")); # Set the default theme
-        // Sets the URL THT is located at
-        if($_SERVER["HTTPS"]) {
-                // HTTPS support
-                define("URL", str_replace("http://", "https://", $db->config("url")));
-        }
-        else {
-                define("URL", $db->config("url"));
-        }
-        define("NAME", $db->config("name")); # Sets the name of the website
+// Converts the $_GET global array into $getvar - DB Friendly.
+$getvar = array();
+if(isset($_GET)){
+
+    foreach($_GET as $key => $value){
+
+        $getvar[$key] = $dbh->strip($value);
+        
+    }
+
 }
-// Converts the $_POST global array into $main->postvar - DB Friendly.
-if(isset($_POST)) {
-        foreach($_POST as $key => $value) {
-                if(INSTALL == 1) {
-                        $main->postvar[$key] = $db->strip($value);
-                }
-                else {
-                        $main->postvar[$key] = $value;
-                }
-        }
-}
-// Converts the $_GET global array into $main->getvar - DB Friendly.
-if(isset($_GET)) {
-        foreach($_GET as $key => $value) {
-                if(INSTALL == 1) {
-                        $main->getvar[$key] = $db->strip($value);
-                }
-                else {
-                        $main->getvar[$key] = $value;        
-                }
-        }
-}
-// Converts the $_REQUEST global array into $main->requestvar - DB Friendly.
-if(isset($_REQUEST)) {
-        foreach($_REQUEST as $key => $value) {
-                if(INSTALL == 1) {
-                        $main->requestvar[$key] = $db->strip($value);
-                }
-                else {
-                        $main->requestvar[$key] = $value;
-                }
-        }
-}
+
+global $getvar;
 
 // Cheap. I know.
-if(!is_dir("../includes") && !is_dir("../themes") && !is_dir("../".ADMINDIR)) {
-        $check = explode("/", dirname($_SERVER["SCRIPT_NAME"]));
-        if($check[count($check)-1] == "install") {
-                die("Please change your THT directory's name from something else other than \"install\". Please?");
-        }
-}
+if(!is_dir("../includes") && !is_dir("../themes") && !is_dir("../".ADMINDIR)){
 
-if(FOLDER != "install" && FOLDER != "includes" && INSTALL != 1) { # Are we installing?  
-                // Old Method - Uncomment if having trouble installing
-        //$error['Error'] = "THT isn't Installed!";
-        //$error['What to do'] = "Please run the install script @ <a href='".LINK."../install'>here</a>";
-        //die($main->error($error));
+    $check = explode("/", dirname($_SERVER["SCRIPT_NAME"]));
+    
+    if($check[count($check) - 1] == "install"){
+
+        die("Please change your THT directory's name from something else other than \"install\". Please?");
         
-                // Lets just redirect to the installer, shall we?
-        $installURL = LINK . "../install";
-        header("Location: $installURL");
+    }
+
 }
 
+if(FOLDER != "install" && FOLDER != "includes" && INSTALL != 1){
+    
+    // Lets just redirect to the installer, shall we?
+    $installURL = INC."../install";
+    header("Location: $installURL");
+    
+}
 
-// Resets the error.
-$_SESSION['ecount'] = 0;
 $_SESSION['errors'] = 0;
 
 // If payment..
-if(FOLDER == "client" && $main->getvar['page'] == "invoices" && $main->getvar['iid'] && $_SESSION['clogged'] == 1) {
-        $invoice->pay($main->getvar['iid'], "client/index.php?page=invoices");
-        echo "You made it this far.. something went wrong.";
+if(FOLDER == "client" && $getvar['page'] == "invoices" && $getvar['iid'] && $_SESSION['clogged'] == 1){
+
+    invoice::pay($getvar['iid'], "client/index.php?page=invoices");
+    echo "You made it this far.. something went wrong.";
+    
 }
 
-function checkForDependencies() {
-        // Here, we're going to see if we have the functions that we need. :D
-        $needed = array();
-        // First things first:
-        $version = explode(".", phpversion());
-        if($version[0] < 5) {
-                die("PHP Version 5 or greater is required! You're currently running: " . phpversion());
-        }
-        if(!function_exists("curl_init")) {
-                $needed[] = "cURL";
-        }
-        if(!function_exists("mysql_connect")) {
-                $needed[] = "MySQL";
-        }
-        if(count($needed) == 0) {
-                return true;
-        }
-        else {
-                $output = "The following function(s) are/is needed for
-                TheHostingTool to run properly: <ul>";
-                foreach($needed as $key => $value) {
-                        $output .= "<li>$value</li>";
-                }
-                $output .= "</ul>";
-                return $output;
-        }
+function checkForDependencies(){
+
+    $needed  = array();
+	
+    $version = explode(".", phpversion());
+    if($version[0] < 5){
+
+        die("PHP Version 5 or greater is required! You're currently running: ".phpversion());
+        
+    }
+
+    if(!function_exists("curl_init")){
+
+        $needed[] = "cURL";
+        
+    }
+
+    if(!function_exists("mysqli_connect")){
+
+        $needed[] = "MySQLi";
+        
+    }
+
+    if(!function_exists("hash_algos")){
+
+        $needed[] = "PECL hash";
+        
+    }
+
+    if(count($needed) == 0){
+
+        return true;
+        
+    }
+
+    $output = "The following function(s) are/is needed for TheHostingTool to run properly: <ul>";
+    foreach($needed as $key => $value){
+
+        $output .= "<li>$value</li>";
+        
+    }
+
+    $output .= "</ul>";
+    return $output;
+    
 }
 
 function find_admin_dir($dir){
- foreach(glob($dir.'/*', GLOB_ONLYDIR) as $dir_search) {
-  if(is_file($dir_search."/ADMIN_DIR")){
-   $admindir = str_replace($dir."/", "", $dir_search);
-   return $admindir;
-  }
- }
+
+    foreach(glob($dir.'/*', GLOB_ONLYDIR) as $dir_search){
+
+        if(is_file($dir_search."/ADMIN_DIR")){
+
+            $admindir = str_replace($dir."/", "", $dir_search);
+            return $admindir;
+            
+        }
+
+    }
+
 }
-        
+
 ?>
