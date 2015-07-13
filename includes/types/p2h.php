@@ -17,8 +17,8 @@ class p2h {
         public $cron = true; // Do we have a cron?
         public $acpBox = true; // Want to show a box thing?
         public $clientBox = true; // Show a box in client cp?
-    public $name = "Post2Host"; // Human readable name of the package.
-    public $warnDate = 20; // The day of the month to warn users about posting.
+        public $name = "Post2Host"; // Human readable name of the package.
+        public $warnDate = 20; // The day of the month to warn users about posting.
 
         private $con; // Forum SQL
 
@@ -229,7 +229,7 @@ class p2h {
                                         break;
 
                                 case 0:
-                                        $neededPosts = (int)$this->getSignup($main->getvar['package']);
+                                        $neededPosts = (int)$this->getSignup($main->getvar['package'], $main->getvar['coupon']);
                                         $s = "s";
                                         if($neededPosts === 1) {
                                                 $s = "";
@@ -253,6 +253,7 @@ class p2h {
 
         public function cron() {
                 global $db, $main, $type, $server, $email;
+                global $navens_coupons, $sdk; //Added by Na'vens Coupons 1
                 // Time to deal with possible bad values
                 if($db->config("p2hcheck") == "") {
                         // Probably a new install. Cron has never run before.
@@ -281,16 +282,18 @@ class p2h {
                                         $forum = $this->determineForum($data['pid']);
                                         $fdetails = $this->forumData($forum);
                                         $this->con = $this->forumCon($forum);
-                                        $posts = $this->checkMonthly($fdetails['type'], $fuser['fuser'], $fdetails['prefix']);
-                                        $mposts = $this->getMonthly($data['pid']);
+                                        $posts =  $navens_coupons->totalposts($data['userid']);
+                                        $mposts = $this->getMonthly($data['pid'], $data['userid']);
                                         if($posts < $mposts) {
                                                 // If the user haven't posted enough...
                                                 $user = $db->client($data['userid']);
                                                 $userPack = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `userid` = '{$data['id']}'");
                                                 // Redeclaration should free the memory used by the query...
                                                 $userPack = $db->fetch_array($userPack);
-                                                // If the user just signed up today, don't punish them.
-                                                if(date("mdY") != date("mdY", $userPack['signup'])) {
+                                                
+                                                $grace_period = $navens_coupons->coupconfig("p2hgraceperiod"); //The grace period in days
+                                                $grace_period = $grace_period*24*60*60;
+                                                if(strtotime(date("Y-m-d")." 00:00:00") > $userPack['signup']+$grace_period) { //This gives the user a grace period.
                                                         // Suspend the user.
                                                         $server->suspend($data['id'], "Only posted $posts post out of the required $mposts monthly posts");
                                                         // Output to the cron.
@@ -318,14 +321,25 @@ class p2h {
                                         $forum = $this->determineForum($data['pid']);
                                         $fdetails = $this->forumData($forum);
                                         $this->con = $this->forumCon($forum);
-                                        $posts = $this->checkMonthly($fdetails['type'], $fuser['fuser'], $fdetails['prefix']);
-                                        $mposts = $this->getMonthly($data['pid']);
+                                        $posts =  $navens_coupons->totalposts($data['userid']);
+                                        $posts_text = $sdk->s($posts, " Post");
+                                        $mposts = $this->getMonthly($data['pid'], $data['userid']);
+                                        $mposts_text = $sdk->s($mposts, " post");
 
                                        $query_url = $db->query("SELECT * FROM `<PRE>config` WHERE `name` LIKE 'p2hforum;:;url;:;".$forum."'");
                                        $data_url = $db->fetch_array($query_url);
                                        $furl = $data_url['value'];
                                         // If the user hasn't posted enough yet
-                                        if($posts < $mposts) {
+                                        $grace_period = $navens_coupons->coupconfig("p2hgraceperiod"); //The grace period in days
+                                        $grace_period = $grace_period*24*60*60;
+                                        $userinfo = $db->client($data['userid']);
+                                        $signup_date = $userinfo['signup'];
+
+                                        if(date("m") != date("m", $signup_date+$grace_period)){  //If they won't be suspended on this months check, then we don't need to warn them.
+                                                $no_email = 1;
+                                        }
+
+                                        if($posts < $mposts && !$no_email) {
                                                 $user = $db->client($data['userid']);
                                                 $userPack = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `userid` = '{$data['id']}'");
                                                 $userPack = $db->fetch_array($userPack);
@@ -336,7 +350,7 @@ class p2h {
                                                 // Warn the user that they still have some more posting to do!
                                                 $email->send($user['email'], $emaildata['subject'], $emaildata['content'], $array);
                                                 // Output to the cron.
-                                                echo "<strong>".$user['user']." (".$fuser['fuser']."):</strong> Warned for not yet posting the required monthly amount. ($posts out of $mposts)<br />";
+                                                echo "<strong>".$user['user']." (".$fuser['fuser']."):</strong> Warned for not yet posting the required monthly amount. ($posts_text posted out of $mposts_text/month)<br />";
                                         }
                                 }
                         }
@@ -356,7 +370,7 @@ class p2h {
                 $fdetails = $this->forumData($forum);
                 $this->con = $this->forumCon($forum);
                 $posts = $this->checkMonthly($fdetails['type'], $user['fuser'], $fdetails['prefix']);
-                $box[1] = $posts ." (". $this->getMonthly($data['pid']) ." Needed)<br />Forum Username: ". $user['fuser'];
+                $box[1] = $posts ." (". $this->getMonthly($data['pid'], $data['userid']) ." Needed)<br />Forum Username: ". $user['fuser'];
                 return $box;
         }
 
@@ -377,42 +391,163 @@ class p2h {
 
         public function clientPage() {
                 global $main, $db, $type, $style;
-                $user = $_SESSION['cuser'];
-                $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `userid` = '{$user}'");
+                global $navens_coupons, $sdk;
+
+                if(is_numeric($main->getvar['remove'])){
+                        $navens_coupons->remove_p2h_coupon($main->getvar['remove']);
+                        $main->redirect("?page=type&type=p2h&sub=forums");
+                        exit;
+                }
+                
+                if($_POST['submitaddcoupon']){
+
+                        if(!$main->postvar['addcoupon']){
+                                $main->errors("Please enter a coupon code.");
+                        }else{
+
+                                $coupcode = $main->postvar['addcoupon'];
+                                $pack_data = $sdk->uidtopack();
+                                $packid = $pack_data['packages']['id'];
+                                $multi_coupons = $navens_coupons->coupconfig("multicoupons");
+
+                                $coupon_info = $navens_coupons->coupon_data($coupcode);
+                                $coupid = $coupon_info['id'];
+
+                                $use_coupon = $navens_coupons->use_coupon($coupid, $packid);
+                                if(!$use_coupon){
+                                        if(!$multi_coupons){
+                                                $main->errors("Coupon code entered was invalid or you're already using a coupon.");
+                                        }else{
+                                                $main->errors("Coupon code entered was invalid.");
+                                        }
+                                }else{
+                                        $main->redirect("?page=type&type=p2h&sub=forums");
+                                }
+                        }
+                }
+
+                $userid = $_SESSION['cuser'];
+                $query = $db->query("SELECT * FROM `<PRE>user_packs` WHERE `userid` = '{$userid}'");
                 $data = $db->fetch_array($query);
                 $forum = $this->determineForum($data['pid']);
                 $user = $type->userAdditional($data['id']);
                 $fdetails = $this->forumData($forum);
                 $this->con = $this->forumCon($forum);
                 $posts = $this->checkMonthly($fdetails['type'], $user['fuser'], $fdetails['prefix']);
+                $total_posts =  $navens_coupons->totalposts($userid);
+                $p2h_payments = $sdk->tdata("mod_navens_coupons_p2h", "uid", $userid);
+                $package_info = $sdk->uidtopack($userid);
+                $user_posts =  $this->userposts($package_info['packages']['id'], $package_info['user_packs']['id']);
                 $monthly = $this->getMonthly($data['pid']);
-                $array['USER'] = $user['fuser'];
-                $need = $monthly - $posts;
-                if($monthly == "1"){
-                $s = "";
+
+                if(empty($p2h_payments)){
+                        $p2h_pay_array = array("uid" =>      $userid,
+                                               "amt_paid" => $user_posts,
+                                               "txn" =>      $package_info['uadditional']['fuser'],
+                                               "datepaid" => time(),
+                                               "gateway" =>  $package_info['additional']['forum']);
+
+                        $sdk->insert("mod_navens_coupons_p2h", $p2h_pay_array);
+                        $p2h_payments = $sdk->tdata("mod_navens_coupons_p2h", "uid", $userid);
+                }
+                        
+                $amt_paid = $p2h_payments['amt_paid'];
+                $txn =      $p2h_payments['txn'];
+                $datepaid = $p2h_payments['datepaid'];
+                $gateway =  $p2h_payments['gateway'];
+
+                $amt_paid = explode(",", $amt_paid);
+                $txn =      explode(",", $txn);
+                $datepaid = explode(",", $datepaid);
+                $gateway =  explode(",", $gateway);
+
+                for($i=0;$i<count($amt_paid);$i++){
+
+                        if($txn[$i] == $package_info['uadditional']['fuser']){
+                                if($amt_paid[$i] != $user_posts){
+                                        $reload = 1;
+                                }
+                        $amt_paid[$i] = $user_posts;
+                        $datepaid[$i] = time();
+                        }
+
+                        $txnlist['PAIDAMOUNT'] =  $sdk->s($amt_paid[$i], " Post");
+                        $txnlist['TXN'] =         $txn[$i];
+                        $txnlist['PAIDDATE'] =    $main->convertdate("n/d/Y", $datepaid[$i]);
+                        $txnlist['GATEWAY'] =     $gateway[$i];
+                        $couparray['TXNS'] .=  $navens_coupons->tpl("invoices/txnlist.tpl", $txnlist);
+
+                        $paidamts = $paidamts.",".$amt_paid[$i];
+                        $paidtxn = $paidtxn.",".$txn[$i];
+                        $paiddate = $paiddate.",".$datepaid[$i];
+                        $paidgateway = $paidgateway.",".$gateway[$i];
+                }
+                        $paidamts = substr($paidamts, 1, strlen($paidamts));
+                        $paidtxn = substr($paidtxn, 1, strlen($paidtxn));
+                        $paiddate = substr($paiddate, 1, strlen($paiddate));
+                        $paidgateway = substr($paidgateway, 1, strlen($paidgateway));
+
+                        $p2h_pay_array = array("amt_paid" => $paidamts,
+                                               "txn" =>      $paidtxn,
+                                               "datepaid" => $paiddate,
+                                               "gateway" =>  $paidgateway);
+
+                        $sdk->update("mod_navens_coupons_p2h", $p2h_pay_array, "uid", $userid);
+                        if($reload){
+                                $main->redirect("?page=type&type=p2h&sub=forums");
+                        }
+
+                $couparray['TOTALPAID'] =    $sdk->s($total_posts, " Post");
+                $couparray['TRANSACTIONS'] = $navens_coupons->tpl("invoices/invoicetransactions.tpl", $couparray);
+
+                $pack_monthly = $package_info['additional']['monthly'];
+                $coupon_total = $pack_monthly - $navens_coupons->get_discount("p2hmonthly", $pack_monthly, $userid);
+
+                $balance = max(0, $monthly-$total_posts);
+
+                $coupons_query = $db->query("SELECT * FROM <PRE>mod_navens_coupons_used WHERE user = '".$_SESSION['cuser']."' AND disabled = '0' ORDER BY `id` ASC");
+                        while($coupons_used_fetch = $db->fetch_array($coupons_query)){
+                                $valid_coupon = $navens_coupons->check_expire($coupons_used_fetch['coupcode']);
+                                if($valid_coupon){
+
+                                        unset($s);
+                                        if($coupons_used_fetch['p2hmonthlydisc'] != 1){
+                                                $s = "s";
+                                        }
+
+                                        $coupons['COUPONAMOUNT'] = $coupons_used_fetch['p2hmonthlydisc']." Post".$s;
+                                        $coupons['COUPCODE'] =     $coupons_used_fetch['coupcode'];
+                                        $coupons['REMOVE'] =       $balance == 0 ? "" : '(<a href = "?page=type&type=p2h&sub=forums&remove='.$coupons_used_fetch['id'].'">Remove</a>)';
+                                        $couparray['COUPONSLIST'] .= $navens_coupons->tpl("ptwitch/couponslist.tpl", $coupons);
+                                }
+                        }
+
+                        if(!$couparray['COUPONSLIST']){
+                                $couparray['COUPONSLIST'] = "<tr><td></td><td align = 'center'>None</td></tr>";
+                        }
+
+                if($total_posts >= $monthly){
+                        $postedcolour = "#779500";
                 }else{
-                $s = "s";
+                        $postedcolour = "#FF7800";
                 }
 
-                if($posts == "1"){
-                $s2 = "";
+                if($balance == "0"){
+                $couparray['ADDCOUPONS'] = "";
+                $couparray['PAIDSTATUS'] = "<font color = '#779500'>Paid</font>";
                 }else{
-                $s2 = "s";
+                $couparray['ADDCOUPONS'] = $navens_coupons->tpl("ptwitch/addcoupons.tpl");
+                $couparray['PAIDSTATUS'] = "<font color = '#FF7800'>Unpaid</font>";
                 }
-
-                if($need == "1"){
-                $s3 = "";
-                }else{
-                $s3 = "s";
-                }
-
-                if($posts >= $monthly) {
-                        $array['MESSAGE'] = "<strong>Well Done!</strong><br />Your plan requires you to post ". $monthly ." time$s. You have posted ". $posts ." time$s2.";
-                }
-                else {
-                        $array['MESSAGE'] = "<strong>You Need More Posts!</strong><br />You haven't posted the monthly required ". $monthly ." post$s. You're total number of posts is ". $posts ." post$s2. You need ". $need ." more post$s3.";
-                }
-                echo $style->replaceVar("tpl/forumposting.tpl", $array);
+                
+                $couparray['POSTEDCOLOUR'] = $postedcolour;
+                $couparray['BASEAMOUNT'] =   $sdk->s($pack_monthly, " Post");
+                $couparray['COUPONTOTAL'] =  $sdk->s($coupon_total, " Post");
+                $couparray['USERPOSTED'] =   $sdk->s(str_replace("-", "&#8722;", $total_posts), " Post");
+                $couparray['TOTALAMOUNT'] =  $sdk->s($balance, " Post");
+                
+                
+                echo $navens_coupons->tpl("ptwitch/coupons.tpl", $couparray);
         }
 
         private function forumCon($name) { # Returns a forum sql
@@ -437,15 +572,30 @@ class p2h {
                 }
         }
 
-        private function getSignup($id) { # Returns the signup posts for a package
+        private function getSignup($id, $coupcode) { # Returns the signup posts for a package
                 global $type;
+                global $navens_coupons;
                 $data = $type->additional($id);
+                $coupon_data = $navens_coupons->coupon_data($coupcode);
+                $coupon_data['p2hinitdisc'] = $navens_coupons->percent_to_value("p2h", $coupon_data['p2hinittype'], $coupon_data['p2hinitdisc'], $data['signup']);
+                $data['signup'] = max(0, $data['signup'] - $coupon_data['p2hinitdisc']);
                 return $data['signup'];
         }
 
-        private function getMonthly($id) { # Returns the signup posts for a package
+        private function getMonthly($id, $user = "") { # Returns the signup posts for a package
                 global $type;
+                global $navens_coupons, $sdk;
                 $data = $type->additional($id);
+                
+                if(!$user){
+                        $user = $_SESSION['cuser'];
+                }
+                
+                if(!is_numeric($user)){
+                        $user = $sdk->userid($user);
+                }
+
+                $data['monthly'] = $navens_coupons->get_discount("p2hmonthly", $data['monthly'], $user);
                 return $data['monthly'];
         }
 
@@ -611,14 +761,21 @@ class p2h {
         }
 
         // This function is used to check a forum user when they signup.
-        private function checkSignup($forum, $prefix) {
+        public function checkSignup($forum, $prefix) {
                 global $db, $main;
                 // The provided forum name.
                 $fuser = $main->getvar['type_fuser'];
                 // The provided forum password.
                 $fpass = $main->getvar['type_fpass'];
                 // Gets the number of posts the user needs to signup
-                $signup = $this->getSignup($main->getvar['package']);
+                $signup = $this->getSignup($main->getvar['package'], $main->getvar['coupon']);
+                
+                if(!$fuser && !$fpass){
+                // The provided forum name.
+                $fuser = $main->postvar['fuser'];
+                // The provided forum password.
+                $fpass = $main->postvar['fpass'];
+                }
 
                 switch($forum) {
                         case "ipb":
@@ -887,9 +1044,31 @@ class p2h {
                         return $data['forum'];
                 }
         }
+
+        public function userposts($packid, $upackid){
+                global $type;
+                
+                $forum = $this->determineForum($packid);
+                $user = $type->userAdditional($upackid);
+                $fdetails = $this->forumData($forum);
+                $this->con = $this->forumCon($forum);
+                $posts = $this->checkMonthly($fdetails['type'], $user['fuser'], $fdetails['prefix']);
+                
+                return $posts;
+        }
+        public function pidtoforumdata($packid){
+                global $type;
+
+                $forum = $this->determineForum($packid);
+                $this->con = $this->forumCon($forum);
+                $details = $this->forumData($forum);
+
+                return $details;
+        }
 }
 //End Type
 
+if(!function_exists('phpbb_check_hash')){
 ///////////////////////////////////////////
 // phpBB Password functions - All written by the phpBB team. All credit to them.
 // Why don't you use a salt? ha mo f***ers
@@ -1010,4 +1189,5 @@ function _hash_crypt_private($password, $setting, &$itoa64)
 
         return $output;
 }
+} //Added by Na'ven's Upgrade [3]
 ?>

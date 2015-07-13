@@ -104,12 +104,12 @@ class page {
                                         echo $style->replaceVar("tpl/cedit.tpl", $array);
                                         return;
                                 }
-                                if (!preg_match("/^([a-zA-Z\.\'\ \-])+$/",$main->postvar['firstname'])) {
+                                if(!preg_match("/^([a-zA-Z\.\'\ \-])+$/",str_replace("\\", "", $main->postvar['firstname']))) {  //"
                                         $main->errors("Please enter a valid first name!");
                                         echo $style->replaceVar("tpl/cedit.tpl", $array);
                                         return;
                                 }
-                                if (!preg_match("/^([a-zA-Z\.\'\ \-])+$/",$main->postvar['lastname'])) {
+                                if (!preg_match("/^([a-zA-Z\.\'\ \-])+$/",str_replace("\\", "", $main->postvar['lastname']))) {  //"
                                         $main->errors("Please enter a valid time last name!");
                                         echo $style->replaceVar("tpl/cedit.tpl", $array);
                                         return;

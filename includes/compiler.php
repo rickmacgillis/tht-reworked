@@ -36,6 +36,7 @@ $starttime = $starttime[1] + $starttime[0];
 #Start us up
 if(CRON != 1) {
         session_start();
+        header("Cache-control: private");
 }
 
 #Stop the output

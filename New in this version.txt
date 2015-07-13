@@ -1,3 +1,46 @@
+=================================================================================================================================================================
+=                                                                       THT 1.3.5 Reworked                                                                      =
+=================================================================================================================================================================
+
+NEW in THT 1.3.5 Reworked:
+
+This version of THT Reworked has several small cosmetic changes as well as the changes listed below.
+
+1.) I made it so that the admin can change the ability for users to sign up multiple times or not.  Now, instead of having the user manually sign out to avoid
+    the "One account per person" message, the system will sign them out and show them the order page when they go to it.  It works off of the old "Multiple
+    signups per IP" setting and I changed the wording in the admin area to say "Multiple signups per user".
+    
+2.) AutoMod 1.0 now comes stock with THT 1.3.5.  See http://thehostingtool.com/forum/thread-1754.html for more details on AutoMod.
+
+The modules listed below are pre-installed in THT 1.3.5 Reworked.  They do not show in AutoMod since they should not be uninstalled.  They are part of THT 1.3.5 Reworked.
+
+    A.) Paid Cron Fix                        - See: http://thehostingtool.com/forum/thread-1757.html
+    B.) Client Account Fix                   - See: http://thehostingtool.com/forum/thread-1755.html
+    C.) Keep Form data                       - See: http://thehostingtool.com/forum/thread-1756.html
+    D.) Packages Fix                         - See: http://thehostingtool.com/forum/thread-1768.html
+    E.) THT SDK                              - See: http://thehostingtool.com/forum/thread-1758.html
+    F.) Na'ven's Coupon System               - See: http://thehostingtool.com/forum/thread-1759.html
+    G.) Na'ven's Upgrade System              - See: http://thehostingtool.com/forum/thread-1775.html
+    H.) Kloxo Server Module for 1.3 Reworked - See: http://thehostingtool.com/forum/thread-1770.html
+
+
+NOTE: Any time I release a new full THT version, I'll only develop modules for that version.  Also, whenever I release a new version, I'll be including all of the
+      modules I've built so far, with the new release.  In some cases I might not be able to do that or it might be a bad idea to do that, so I won't, but in most
+      cases, all of my modules will be in the newest release of Reworked.  Any THT releases I make will be called THT [version] Reworked and the first part of the
+      version number will always be the stock verion of THT that I built it off of.  So, when 2.0 comes out, it'll be THT 2.0 Reworked and so forth.  The third and
+      forth part of the version number are for distinguishing my versions from one another that were made of of the stock THT version.  So, the number will be
+      [THT stock version].[Major revision].[Minor revision]  So, 1.3.5 is THT 1.3 with the .5 for a major revision.  I hope this helps to distinguish the versions
+      from each other.
+
+
+
+=================================================================================================================================================================
+=                                                                        THT 1.3 Reworked                                                                       =
+=================================================================================================================================================================
+
+
+THT 1.3 Reworked's changes:
+
 This is a bug fixed version of The Hosting Tool 1.3 and has as many bugs fixed as I could find.  I also made it more secure and made other modifications too.
 
 Bugs fixed by Na'ven Enigma of http://thelifemaster.com

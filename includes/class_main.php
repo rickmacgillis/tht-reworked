@@ -13,7 +13,7 @@ class main {
         
         public $postvar = array(), $getvar = array(), $requestvar = array(); # All post/get/request strings
         
-        public function convertdate($dtformat, $time){
+        public function convertdate($dtformat, $time, $user = ""){
         global $db;
         if($_SESSION['logged']){
         $table = "staff";
@@ -21,8 +21,13 @@ class main {
         }elseif($_SESSION['clogged']){
         $table = "users";
         $userid = $_SESSION['cuser'];
-        }
+}
         
+        if($user){
+                $userid = $user;
+                $table = "users";
+        }
+
         if($table){
         $query = $db->query("SELECT tzadjust,id FROM <PRE>".$table." WHERE id = '".$userid."' LIMIT 1");
         $data = $db->fetch_array($query);

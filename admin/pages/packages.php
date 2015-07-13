@@ -175,11 +175,11 @@ class page {
                                                 }
                                                 
                                                 $array['ORIGTYPE'] = $data['type'];
-                                                $query = $db->query("SELECT * FROM `<PRE>servers`");
-                                                while($data = $db->fetch_array($query)) {
-                                                        $values[] = array($data['name'], $data['id']);        
+                                                $query_serv = $db->query("SELECT * FROM `<PRE>servers`");
+                                                while($data_serv = $db->fetch_array($query_serv)) {
+                                                        $values[] = array($data_serv['name'], $data_serv['id']);
                                                 }
-                                                $array['SERVER'] = $array['THEME'] = $main->dropDown("server", $values, $data['server']);
+                                                $array['SERVER'] = $main->dropDown("server", $values, $data['server']);
                                                 echo "This will only edit the package on THT, not edit the package on the backend for you.<br><br>";
                                                 echo $style->replaceVar("tpl/editpackage.tpl", $array);
                                         }

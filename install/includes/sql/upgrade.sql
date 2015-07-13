@@ -1,45 +1,214 @@
-ALTER TABLE `%PRE%user_packs` CHANGE `id` `id` MEDIUMINT( 9 ) NOT NULL AUTO_INCREMENT ,
-CHANGE `userid` `userid` MEDIUMINT( 9 ) NOT NULL;
+INSERT INTO `%PRE%acpnav` (`visual`, `icon`, `link`) VALUES
+('AutoMod', 'box.png', 'automod'),
+('Coupons', 'award_star_silver_3.png', 'navens_coupons');
 
-ALTER TABLE `%PRE%invoices` CHANGE `amount` `amount` VARCHAR( 255 ) NOT NULL;
-INSERT INTO `%PRE%config` (`name`, `value`) VALUES ('paypalmode', 'live'), ('paypalsandemail', ''), ('useakismet', '0'), ('akismetkey', ''), ('emailoncron', '0'), ('p2hwarndate', '20');
-UPDATE `%PRE%config` SET value = 'bluelust' WHERE name = 'theme' LIMIT 1;
-ALTER TABLE `%PRE%users` ADD `tzadjust` TEXT NOT NULL;
-ALTER TABLE `%PRE%staff` ADD `tzadjust` TEXT NOT NULL;
-ALTER TABLE `%PRE%acpnav` CHANGE `visual` `visual` VARCHAR( 255 ) NOT NULL;
-DELETE FROM `%PRE%acpnav` WHERE visual = 'Order Form' LIMIT 1;
-ALTER TABLE `%PRE%users_bak` ADD `uid` INT( 11 ) NOT NULL;
+-- --------------------------------------------------------
 
-ALTER TABLE `%PRE%servers` ADD `port` VARCHAR( 5 ) NOT NULL,
-ADD `whmport` VARCHAR( 5 ) NOT NULL,
-ADD `nameservers` TEXT NOT NULL,
-ADD `ip` VARCHAR( 50 ) NOT NULL;
+--
+-- Table structure for table `%PRE%automod_mods`
+--
 
-DROP TABLE IF EXISTS `%PRE%templates`;
-CREATE TABLE IF NOT EXISTS `%PRE%templates` (
-  `id` mediumint(9) NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  `acpvisual` varchar(50) NOT NULL,
-  `subject` varchar(250) NOT NULL,
+CREATE TABLE IF NOT EXISTS `%PRE%automod_mods` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `mod_install_dir` varchar(255) NOT NULL,
+  `mod_name` varchar(255) NOT NULL,
+  `mod_version` varchar(255) NOT NULL,
+  `mod_thtversion` varchar(255) NOT NULL,
+  `mod_descrip` text NOT NULL,
+  `mod_author` varchar(255) NOT NULL,
+  `mod_link` text NOT NULL,
+  `mod_projectpage` text NOT NULL,
+  `mod_updateurl` text NOT NULL,
+  `mod_support` text NOT NULL,
+  `mod_license` text NOT NULL,
+  `mod_diy` text NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=20;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
-INSERT INTO `%PRE%templates` (`id`, `name`, `acpvisual`, `subject`) VALUES
-(1, 'reset', 'Client - Reset Password', 'New Password'),
-(3, 'newacc', 'Client - New Hosting Account', 'Your Hosting Account'),
-(4, 'termacc', 'Client - Client Terminated', 'Termination'),
-(5, 'suspendacc', 'Client - Suspended Account', 'Suspended'),
-(6, 'unsusacc', 'Client - Unsuspended Account', 'Unsuspended'),
-(7, 'newaccadmin', 'Client - Awaiting Validation', 'Awaiting Admin'),
-(8, 'adminval', 'Admin - User Needs Validating', 'User Awaiting Validation'),
-(9, 'approvedacc', 'Client - Account Approved', 'Account Approved'),
-(10, 'declinedacc', 'Client - Declined Account', 'Account Declined'),
-(11, 'p2hwarning', 'Client - Post 2 Host - Posts Warning', 'Monthly Posts Warning'),
-(12, 'newticket', 'Admin - New Ticket', 'New Ticket'),
-(13, 'newresponse', 'Admin - New Ticket Response', 'New Ticket Response'),
-(14, 'clientresponse', 'Client - New Ticket Response', 'New Ticket Response'),
-(15, 'areset', 'Admin - Admin Reset Password', 'New ACP Password!'),
-(16, 'newinvoice', 'Client - New Invoice', 'New Invoice'),
-(17, 'cancelacc', 'Client - Account Cancelled', 'Cancelled'),
-(18, 'newreselleracc', 'Client - New Reseller Hosting Account', 'Your Reseller Hosting Account'),
-(19, 'newreselleraccadmin', 'Client - Reseller Awaiting Validation', 'Awaiting Admin');
+-- --------------------------------------------------------
+
+--
+-- Dumping data for table `%PRE%clientnav`
+--
+
+INSERT INTO `%PRE%clientnav` (`visual`, `icon`, `link`) VALUES
+('Upgrade', 'award_star_silver_3.png', 'upgrade');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%config`
+--
+
+ALTER TABLE `%PRE%config` ADD `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST;
+
+--
+-- Dumping data for table `%PRE%config`
+--
+
+UPDATE `%PRE%config` SET value = '1.3.5 Reworked' WHERE name = 'version' LIMIT 1;
+INSERT INTO `%PRE%config` SET name = 'automodvers', value = '1.0';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%invoices`
+--
+
+ALTER TABLE `%PRE%invoices`
+  ADD `datepaid` text NOT NULL,
+  ADD `txn` text NOT NULL,
+  ADD `amt_paid` text NOT NULL,
+  ADD `gateway` text NOT NULL,
+  ADD `pay_now` VARCHAR( 255 ) NOT NULL,
+  ADD `locked` int(11) NOT NULL,
+  ADD `pid` int(11) NOT NULL,
+  ADD `hadcoupons` text NOT NULL,
+  ADD `couponvals` text NOT NULL;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%mod_navens_coupons`
+--
+
+CREATE TABLE IF NOT EXISTS `%PRE%mod_navens_coupons` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `coupname` varchar(255) NOT NULL,
+  `shortdesc` text NOT NULL,
+  `coupcode` varchar(255) NOT NULL,
+  `area` varchar(255) NOT NULL,
+  `goodfor` varchar(255) NOT NULL,
+  `monthsgoodfor` int(11) NOT NULL,
+  `expiredate` varchar(255) NOT NULL,
+  `limited` varchar(255) NOT NULL,
+  `user` varchar(255) NOT NULL,
+  `packages` text NOT NULL,
+  `paiddisc` varchar(255) NOT NULL,
+  `p2hinitdisc` int(11) NOT NULL,
+  `p2hmonthlydisc` int(11) NOT NULL,
+  `paidtype` int(11) NOT NULL,
+  `p2hinittype` int(11) NOT NULL,
+  `p2hmonthlytype` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%mod_navens_coupons_config`
+--
+
+CREATE TABLE IF NOT EXISTS `%PRE%mod_navens_coupons_config` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `configname` varchar(255) NOT NULL,
+  `configvalue` text NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+
+--
+-- Dumping data for table `%PRE%mod_navens_coupons_config`
+--
+
+INSERT INTO `%PRE%mod_navens_coupons_config` (`configname`, `configvalue`) VALUES
+('multicoupons', '0'),
+('p2hgraceperiod', '5');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%mod_navens_coupons_p2h`
+--
+
+CREATE TABLE IF NOT EXISTS `%PRE%mod_navens_coupons_p2h` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uid` int(11) NOT NULL,
+  `amt_paid` text NOT NULL,
+  `txn` text NOT NULL,
+  `datepaid` text NOT NULL,
+  `gateway` text NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%mod_navens_coupons_used`
+--
+
+CREATE TABLE IF NOT EXISTS `%PRE%mod_navens_coupons_used` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user` int(11) NOT NULL,
+  `coupcode` varchar(255) NOT NULL,
+  `timeapplied` int(11) NOT NULL,
+  `packages` int(11) NOT NULL,
+  `goodfor` varchar(255) NOT NULL,
+  `monthsgoodfor` int(11) NOT NULL,
+  `paiddisc` varchar(255) NOT NULL,
+  `p2hmonthlydisc` int(11) NOT NULL,
+  `disabled` int(11) NOT NULL,
+  `datedisabled` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%mod_navens_upgrade`
+--
+
+CREATE TABLE IF NOT EXISTS `%PRE%mod_navens_upgrade` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uid` int(11) NOT NULL,
+  `newpack` int(11) NOT NULL,
+  `flags` int(11) NOT NULL,
+  `created` int(11) NOT NULL,
+  `coupcode` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%resources`
+--
+
+ALTER TABLE `%PRE%resources` ADD `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%servers`
+--
+
+ALTER TABLE `%PRE%servers`
+  ADD `dnstemplate` varchar(255) NOT NULL,
+  ADD `welcome` int(11) NOT NULL;
+  
+ALTER TABLE `%PRE%servers` CHANGE `user` `user` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `%PRE%templates`
+--
+
+ALTER TABLE `%PRE%templates` CHANGE `acpvisual` `acpvisual` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+--
+-- Dumping data for table `%PRE%templates`
+--
+
+INSERT INTO `%PRE%templates` (`name`, `acpvisual`, `subject`) VALUES
+('upgrade_welcome', 'Upgrade - Client - Upgraded', 'Your Hosting Account'),
+('admin_manual_upgrade', 'Upgrade - Admin - Manual User Upgrade Required', 'A user needs to be manually upgraded.'),
+('upgrade_welcome_resell', 'Upgrade - Client - Upgraded To Reseller', 'Your Reseller Hosting Account'),
+('upgrade_welcome_newserv', 'Upgrade - Client - Upgraded (New Server)', 'Your Hosting Account'),
+('upgrade_welcome_newserv_resell', 'Upgrade - Client - Upgraded To Reseller (New Server)', 'Your Reseller Hosting Account'),
+('admin_notify_newserv', 'Upgrade - Admin - User Switched Servers', 'A user has switched servers.'),
+('adminval_upgrade', 'Upgrade - Admin - Upgraded User Needs Approval', 'A user has upgraded and requires approval.'),
+('admin_inform_new_upgrade', 'Upgrade - Admin - User Upgraded', 'A user has upgraded their hosting plan.'),
+('admin_inform_new_upgrade', 'Upgrade - Admin - User Upgraded', 'A user has upgraded their hosting plan.'),
+('admin_inform_new_upgrade', 'Upgrade - Admin - User Upgraded', 'A user has upgraded their hosting plan.'),
+('adminval_upgrade_newserv', 'Upgrade - Admin - Upgraded User Needs Approval (New Server)', 'A user has upgraded and requires approval.'),
+('upgrade_denied', 'Upgrade - Client - Upgrade Denied', 'Your hosting plan change has been denied.');

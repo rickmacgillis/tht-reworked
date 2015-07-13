@@ -22,7 +22,7 @@ function acp() {
         global $type;
         global $email;
         ob_start(); # Stop the output buffer
-        
+
         if(!$main->getvar['page']) { 
                 $main->getvar['page'] = "home";
         }
@@ -213,7 +213,7 @@ function acp() {
         
         $data = ob_get_contents(); # Retrieve the HTML
         ob_clean(); # Flush the HTML
-        
+
         return $data; # Return the HTML
 }
 

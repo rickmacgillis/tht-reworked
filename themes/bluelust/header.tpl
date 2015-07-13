@@ -60,17 +60,22 @@ document.write(messageDate);
 <div id="panel">
 <!-- start: header_welcomeblock_member -->
 <br/>%INFO%<br/>
-<a href="<URL>order"><strong>Order Form</strong></a> | <a href="<URL>client"><strong>Client Area</strong></a> | <a href="<URL>support"><strong>Support</strong></a>
+<a href="<URL>order"><strong>Order Form</strong></a> | <a href="<URL>client"><strong>Client Area</strong></a> | <a href="<URL>support"><strong>Knowledgebase</strong></a>
 </div>
 
-<div class="logo"><a href="<URL>"><img src="<IMG>logo.png"/></a></div>
+<table width = "650">
+ <tr>
+  <td width = "368"><div class="logo"><a href="<URL>"><img src="<IMG>logo.png"/></a></div></td>
+  <td align = "center" valign = "middle"></td>
+ </tr>
+</table>
 
 
 </div>
 <div class="menu">
 <ul>
   <li><a href="../">Home</a></li>
-  <li><a href="<URL>forums">Forums</a></li>
+  <li><a href="<URL>forums" target = "_blank">Forums</a></li>
   <li><a href="<URL>support">Knowledgebase</a></li>
   <li><a href="<URL>client">Members</a></li>
   <li><a href="<URL>client/index.php?page=invoices">Billing</a></li>

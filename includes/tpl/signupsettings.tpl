@@ -10,7 +10,7 @@
 <form id="settings" name="settings" method="post" action="">
 <table width="100%" border="0" cellspacing="2" cellpadding="0">
   <tr>
-    <td width="25%">Multiple Signups Per IP:</td>
+    <td width="25%">Multiple Signups Per User:</td>
     <td>
       %MULTIPLE%    <a title="Do you allow multiple signups for one IP?" class="tooltip"><img src="<URL>themes/icons/information.png" /></a>
     </td>

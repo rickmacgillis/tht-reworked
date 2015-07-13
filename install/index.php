@@ -27,8 +27,8 @@ function generateSiteUrl() {
 }
 
 //INSTALL GLOBALS
-define("CVER", "1.2.3");
-define("NVER", "1.3");
+define("CVER", "1.3");
+define("NVER", "1.3.5 Reworked");
 
 define("LINK", "../includes/"); # Set link
 include(LINK."compiler.php"); # Get compiler
@@ -72,8 +72,7 @@ if(INSTALL == 1 || filesize(LINK."conf.inc.php") > 0){
                 $disable = true;
         }
         else {
-                $array['ANYTHING'] = "Since you've already ran the installer, your config has been re-written to the \"not installed\" state. If you are upgrading, this is normal!<br><br>
-                <center><h3><font color = '#FFFFFF'><span style='background-color: #000000'>BACKUP YOUR DATABASE NOW! - The installer removes the email templates table!</span></font></h3></center><br>";
+                $array['ANYTHING'] = "Since you've already ran the installer, your config has been re-written to the \"not installed\" state. If you are upgrading, this is normal!<br>";
         }
 }
 if(!file_exists($link)) {

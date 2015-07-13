@@ -5,6 +5,8 @@
   <select size="1" name="show">
    <option value="all">ALL</option>
    <option value="PayPal">PayPal IPN</option>
+   <option value="Coupon">Coupons used</option>
+   <option value="Upgraded">Upgraded</option>
    <option value="Registered">Registered</option>
    <option value="Package created">Package created</option>
    <option value="Approved">Approved</option>

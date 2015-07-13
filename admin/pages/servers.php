@@ -36,13 +36,24 @@ class page {
                         default:
                                 if($_POST) {
                                         foreach($main->postvar as $key => $value) {
-                                                if($value == "" && !$n && $key != "whmport") {
+                                                if($value == "" && !$n && $key != "whmport" && $key != "welcome" && $key != "nstmp") {
                                                         $main->errors("Please fill in all the fields!");
                                                         $n++;
                                                 }
                                         }
                                         if(!$n) {
-                                                $db->query("INSERT INTO `<PRE>servers` (ip, whmport, port, nameservers, name, host, user, accesshash, type) VALUES('{$main->postvar['ip']}', '{$main->postvar['whmport']}',  '{$main->postvar['port']}', '{$_POST['nameservers']}', '{$main->postvar['name']}', '{$main->postvar['host']}', '{$main->postvar['user']}', '{$main->postvar['hash']}', '{$main->postvar['type']}')");
+                                                $db->query("INSERT INTO `<PRE>servers` (ip, whmport, port, nameservers, name, host, user, accesshash, type, dnstemplate, welcome)
+                                                           VALUES('{$main->postvar['ip']}',
+                                                                  '{$main->postvar['whmport']}',
+                                                                  '{$main->postvar['port']}',
+                                                                  '{$main->postvar['nameservers']}',
+                                                                  '{$main->postvar['name']}',
+                                                                  '{$main->postvar['host']}',
+                                                                  '{$main->postvar['user']}',
+                                                                  '{$main->postvar['hash']}',
+                                                                  '{$main->postvar['type']}',
+                                                                  '{$main->postvar['nstmp']}',
+                                                                  '{$main->postvar['welcome']}')");
                                                 $main->errors("Server has been added!");
                                         }
                                 }
@@ -54,7 +65,10 @@ class page {
                                         $values[] = array($stype->name, $fname[0]);        
                                 }
                                 $array['TYPE'] = $main->dropDown("type", $values, 0, 0);
-                                echo $style->replaceVar("tpl/addserver.tpl", $array);
+                                $welcomeopts[] = array("Yes", 1);
+                                $welcomeopts[] = array("No", 0);
+                                $array['WELCOMEOPTS'] = $main->dropdown("welcome", $welcomeopts, 1, 0);
+                                echo $style->replaceVar("tpl/modules/navens_kloxo_1_0/addserver.tpl", $array);
                         break;
                         
                         case "view":
@@ -66,13 +80,13 @@ class page {
                                         else {
                                                 if($_POST) {
                                                         foreach($main->postvar as $key => $value) {
-                                                                if($value == "" && !$n && $key != "whmport") {
+                                                                if($value == "" && !$n && $key != "whmport" && $key != "welcome" && $key != "nstmp") {
                                                                         $main->errors("Please fill in all the fields!");
                                                                         $n++;
                                                                 }
                                                         }
                                                         if(!$n) {
-                                                                $db->query("UPDATE `<PRE>servers` SET `whmport` = '{$_POST['whmport']}', `ip` = '{$_POST['ip']}', `nameservers` = '{$_POST['nameservers']}', `port` = '{$main->postvar['port']}', `name` = '{$main->postvar['name']}', `user` = '{$main->postvar['user']}', `host` = '{$main->postvar['host']}', `accesshash` = '{$main->postvar['hash']}', `type` = '{$main->postvar['type']}' WHERE `id` = '{$main->getvar['do']}'");
+                                                                $db->query("UPDATE `<PRE>servers` SET `welcome` = '{$_POST['welcome']}', `dnstemplate` = '{$_POST['nstmp']}', `whmport` = '{$_POST['whmport']}', `ip` = '{$_POST['ip']}', `nameservers` = '{$_POST['nameservers']}', `port` = '{$main->postvar['port']}', `name` = '{$main->postvar['name']}', `user` = '{$main->postvar['user']}', `host` = '{$main->postvar['host']}', `accesshash` = '{$main->postvar['hash']}', `type` = '{$main->postvar['type']}' WHERE `id` = '{$main->getvar['do']}'");
                                                                 $main->errors("Server edited!");
                                                                 $main->done();
                                                         }
@@ -86,6 +100,9 @@ class page {
                                                 $array['SERVERIP'] = $data['ip'];
                                                 $array['RESELLERPORT'] = $data['whmport'];
                                                 $array['NAMESERVERS'] = $data['nameservers'];
+                                                $welcomeopts[] = array("Yes", 1);
+                                                $welcomeopts[] = array("No", 0);
+                                                $array['WELCOMEOPTS'] = $main->dropdown("welcome", $welcomeopts, $data['welcome'], 0);
                                                 $array['ID'] = $data['id'];
                                                 $files = $main->folderFiles(LINK."servers/");
                                                 foreach($files as $value) {
@@ -95,7 +112,7 @@ class page {
                                                         $values[] = array($stype->name, $fname[0]);        
                                                 }
                                                 $array['TYPE'] = $main->dropDown("type", $values, $data['type'], 0, 0);
-                                                echo $style->replaceVar("tpl/viewserver.tpl", $array);
+                                                echo $style->replaceVar("tpl/modules/navens_kloxo_1_0/viewserver.tpl", $array);
                                         }
                                 }
                                 else {
@@ -107,10 +124,9 @@ class page {
                                                 echo "<ERRORS>";
                                                 while($data = $db->fetch_array($query)) {
                                                         echo $main->sub("<strong>".$data['name']."</strong>", '<a href="?page=servers&sub=view&do='.$data['id'].'"><img src="'. URL .'themes/icons/magnifier.png"></a>');
-                                                        if($n) {
-                                                                echo "<br />";        
-                                                        }
-                                                        $n++;
+                                                        
+//REMOVED CODE FROM MODULE: navens_kloxo [0]  DO NOT REMOVE
+
                                                 }
                                         }
                                 }
@@ -159,10 +175,9 @@ class page {
                                                 echo "Caution: Some servers are set to automatically ban the IP address of this server (".$main->getWanIp().") after a certain number of failed logins.<br />";
                                                 while($data = $db->fetch_array($query)) {
                                                         echo $main->sub("<strong>".$data['name']."</strong>", '<a href="?page=servers&sub=test&do='.$data['id'].'"><img src="'. URL .'themes/icons/server_chart.png"></a>');
-                                                        if($n) {
-                                                                echo "<br />";        
-                                                        }
-                                                        $n++;
+                                                        
+//REMOVED CODE FROM MODULE: navens_kloxo [0]  DO NOT REMOVE
+
                                                 }
                                         }
                                 }

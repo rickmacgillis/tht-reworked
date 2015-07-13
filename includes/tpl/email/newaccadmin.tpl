@@ -30,7 +30,7 @@ If you are using an existing domain with your new hosting account, you will need
 <br>
 %NAMESERVERS%<br>
 <br>
-Temporarily you may use one of the addresses given below manage your web site<br>
+Temporarily you may use one of the addresses given below to manage your web site<br>
 <br>
 Temporary FTP Hostname: %SERVERIP%<br>
 Temporary Webpage URL: http://%SERVERIP%/~%USER%<br>
@@ -47,6 +47,6 @@ Control Panel: http://%DOMAIN%:%CPPORT%<br>
 POP3 Host Address : mail.%DOMAIN%<br>
 SMTP Host Address: mail.%DOMAIN%<br>
 Username: YOUR_EMAIL_PREFIX+%DOMAIN%<br>
-Password: The password you set for your email address in cPanel<br>
+Password: The password you set for your email address in your control panel<br>
 <br>
 Thank you for choosing us for your hosting needs.

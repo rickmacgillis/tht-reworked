@@ -39,7 +39,7 @@ function templates(id) {
 </script>
 <ERRORS>
 <form action="" method="post" name="edit" id="edit">
-<table width="100%" border="0" cellspacing="2" cellpadding="0">
+<table width="100%" border="0" cellspacing="2" cellpadding="0" class = "text">
   <tr>
     <td width="20%">Select a Template:</td>
     <td><select name="template" id="template" onchange="templates(this.value)"><option value="" disabled="disabled" selected="selected">Select a template</option>%TEMPLATES%</select>
@@ -48,7 +48,7 @@ function templates(id) {
 </table>
 <div id="templatebit" style="display:none;">
         <br />
-    <table width="100%" border="0" cellspacing="2" cellpadding="0">
+    <table width="100%" border="0" cellspacing="2" cellpadding="0" class = "text">
       <tr>
         <td colspan="2" valign="top" id="description"></td>
       </tr>

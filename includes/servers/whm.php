@@ -12,6 +12,7 @@ class whm {
         
         public $name = "cPanel/WHM"; # THT Values
         public $hash = true; # Password or Access Hash?
+        public $canupgrade = true;
         
         private $server;
         
@@ -55,7 +56,7 @@ class whm {
                 curl_setopt($ch, CURLOPT_HEADER, 0);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
                 $curlheaders[0] = "Authorization: WHM $authstr";
-                curl_setopt($ch,CURLOPT_HTTPHEADER,$curlheaders);
+                curl_setopt($ch, CURLOPT_HTTPHEADER,$curlheaders);
                 $data = curl_exec($ch);
                 if($data === false) {
                         if($returnErrors) {
@@ -80,7 +81,7 @@ class whm {
                         return false;
                 }
                 elseif(!$xml) {
-                        $xml = new SimpleXMLElement($data);
+                         $xml = new SimpleXMLElement($data);
                 }
                 else {
                         return $data;
@@ -260,7 +261,7 @@ class whm {
                 if(!is_null($serverId)) {
                         $this->server = (int)$serverId;
                 }
-                
+
                 $command = $this->remote("/xml-api/version", 0, false, true);
                 if((is_object($command)) and (get_class($command) == "SimpleXMLElement")) {
                         if(isset($command->version)) {
@@ -279,6 +280,79 @@ class whm {
                         return $command;
                 }
         }
+        
+        public function upgrade($server, $pkg, $user){
+                global $main;
+                global $db;
+
+                $this->server = $server;
+                $action = "/xml-api/changepackage".
+                                        "?user=". $user . "".
+                                        "&pkg=". $pkg ."";
+
+                $command = $this->remote($action);
+
+                if($command->result->status == 1) {
+                        return true;
+                }
+                else {
+                        echo "WHM Error: ". $command->result->statusmsg;
+                }
+        }
+        
+public function simpleXMLToArray(SimpleXMLElement $xml,$attributesKey=null,$childrenKey=null,$valueKey=null){
+
+    if($childrenKey && !is_string($childrenKey)){$childrenKey = '@children';}
+    if($attributesKey && !is_string($attributesKey)){$attributesKey = '@attributes';}
+    if($valueKey && !is_string($valueKey)){$valueKey = '@values';}
+
+    $return = array();
+    $name = $xml->getName();
+    $_value = trim((string)$xml);
+    if(!strlen($_value)){$_value = null;};
+
+    if($_value!==null){
+        if($valueKey){$return[$valueKey] = $_value;}
+        else{$return = $_value;}
+    }
+
+    $children = array();
+    $first = true;
+    foreach($xml->children() as $elementName => $child){
+        $value = simpleXMLToArray($child,$attributesKey, $childrenKey,$valueKey);
+        if(isset($children[$elementName])){
+            if(is_array($children[$elementName])){
+                if($first){
+                    $temp = $children[$elementName];
+                    unset($children[$elementName]);
+                    $children[$elementName][] = $temp;
+                    $first=false;
+                }
+                $children[$elementName][] = $value;
+            }else{
+                $children[$elementName] = array($children[$elementName],$value);
+            }
+        }
+        else{
+            $children[$elementName] = $value;
+        }
+    }
+    if($children){
+        if($childrenKey){$return[$childrenKey] = $children;}
+        else{$return = array_merge($return,$children);}
+    }
+
+    $attributes = array();
+    foreach($xml->attributes() as $name=>$value){
+        $attributes[$name] = trim($value);
+    }
+    if($attributes){
+        if($attributesKey){$return[$attributesKey] = $attributes;}
+        else{$return = array_merge($return, $attributes);}
+    }
+
+    return $return;
 }
 
+}
 ?>

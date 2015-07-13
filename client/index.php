@@ -254,6 +254,7 @@ if(!$_SESSION['clogged']) {
                 }
 }
 elseif($_SESSION['clogged']) {
+
         if(!$main->getvar['page']) {
                 $main->getvar['page'] = "home";
         }
@@ -267,6 +268,11 @@ elseif($_SESSION['clogged']) {
                 $content = '<div align="center">'.$main->table("Client Area - Disabled", $db->config("cmessage"), "300px").'</div>';
         }
         else {
+                $usersdb = $db->query("SELECT * FROM `<PRE>users` WHERE `id` = '{$_SESSION['cuser']}'");
+                $usersdb_data = $db->fetch_array($usersdb);
+                if(empty($usersdb_data)){
+                        $main->redirect("?page=logout");
+                }
                 $content = client();
         }
         echo $style->get("header.tpl");

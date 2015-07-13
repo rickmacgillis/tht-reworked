@@ -91,12 +91,34 @@ class Ajax {
                         $pass = explode(":", $main->getvar['pass']);
                         if($pass[0] == $pass[1]) {
                                 $_SESSION['check']['pass'] = true;
-                                echo 1;        
+                                echo 1;
                         }
                         else {
                                 $_SESSION['check']['pass'] = false;
-                                echo 0;        
+                                echo 0;
                         }
+                }
+        }
+        public function couponcheck() {
+                global $main, $navens_coupons, $type;
+                if(empty($main->getvar['coupon'])) {
+                   echo 1;
+                   return;
+                }else{
+                   $package_type = $type->determineType($main->getvar['package']);
+                   if($package_type == "free"){  //lol =)
+                    echo 1;
+                    return;
+                   }
+                   
+                   $coupon_text = $navens_coupons->validate_coupon($main->getvar['coupon'], "orders", $main->getvar['username'], $main->getvar['package']);
+                   if($coupon_text){
+                    echo $coupon_text;
+                    return;
+                   }else{
+                    echo 0;
+                    return;
+                   }
                 }
         }
         public function emailcheck() {
@@ -496,7 +518,40 @@ class Ajax {
                         echo 1;        
                 }
         }
-        
+
+        public function servernstmp() {
+                if($_SESSION['logged']) {
+                        global $main, $db;
+                        $type = $main->getvar['type'];
+                        include(LINK ."servers/". $type .".php");
+                        $server = new $type;
+                        if($server->ns_tmpl) {
+                                echo 1;
+                        }
+                        else {
+                                echo 0;
+                        }
+
+                        echo ";:;". $server->dnstemplate;
+                }
+        }
+
+        public function serverwelcome() {
+                if($_SESSION['logged']) {
+                        global $main, $db;
+                        $type = $main->getvar['type'];
+                        $id = $main->getvar['server'];
+                        include(LINK ."servers/". $type .".php");
+                        $server = new $type;
+                        if($server->has_welcome) {
+                                echo 1;
+                        }
+                        else {
+                                echo 0;
+                        }
+                }
+        }
+
         public function editserverhash() {
                 if($_SESSION['logged']) {
                         global $main, $db;
@@ -505,14 +560,54 @@ class Ajax {
                         include(LINK ."servers/". $type .".php");
                         $server = new $type;
                         if($server->hash) {
-                                echo 0;        
+                                echo 0;
                         }
                         else {
-                                echo 1;        
+                                echo 1;
                         }
                         $query = $db->query("SELECT * FROM `<PRE>servers` WHERE `id` = '{$id}'");
                         $data = $db->fetch_array($query);
                         echo ";:;". $data['accesshash'];
+                }
+        }
+
+        public function editservernstmp() {
+                if($_SESSION['logged']) {
+                        global $main, $db;
+                        $type = $main->getvar['type'];
+                        $id = $main->getvar['server'];
+                        include(LINK ."servers/". $type .".php");
+                        $server = new $type;
+                        if($server->ns_tmpl) {
+                                echo 1;
+                        }
+                        else {
+                                echo 0;
+                        }
+                        $query = $db->query("SELECT * FROM `<PRE>servers` WHERE `id` = '{$id}'");
+                        $data = $db->fetch_array($query);
+                        if(!$data['dnstemplate']){
+                            $tmpl = $server->dnstemplate;
+                        }else{
+                            $tmpl = $data['dnstemplate'];
+                        }
+                        echo ";:;". $tmpl;
+                }
+        }
+
+        public function editserverwelcome() {
+                if($_SESSION['logged']) {
+                        global $main, $db;
+                        $type = $main->getvar['type'];
+                        $id = $main->getvar['server'];
+                        include(LINK ."servers/". $type .".php");
+                        $server = new $type;
+                        if($server->has_welcome) {
+                                echo 1;
+                        }
+                        else {
+                                echo 0;
+                        }
                 }
         }
         

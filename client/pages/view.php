@@ -23,7 +23,7 @@ class page {
 		$array['USER'] = $data4['user'];
 		$array['SIGNUP'] = $main->convertdate("n/d/Y", $data3['signup']);
 		$array['DOMAIN'] = $data3['domain'];
-		$array['PACKAGE'] = $data2['name'];
+		$array['PACKAGE'] = $data2['name']." <a href = '?page=upgrade'>Change</a>";
 		$array['DESCRIPTION'] = $data2['description'];
 		
 		if($_POST) {
